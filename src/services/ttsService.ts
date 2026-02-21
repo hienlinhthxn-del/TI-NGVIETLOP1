@@ -3,6 +3,11 @@ import { apiKey } from "./geminiService";
 
 export async function generateSpeech(text: string): Promise<string | null> {
   try {
+    if (!apiKey) {
+      console.warn("TTS Skipped: API Key is missing");
+      return null;
+    }
+
     const ai = new GoogleGenAI({ apiKey: apiKey });
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
