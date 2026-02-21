@@ -1,0 +1,7 @@
+{
+  "name": "Remix: Hành Trang Lớp 1 - Kết Nối Tri Thức",
+  "description": "Ứng dụng hỗ trợ học sinh lớp 1 học vần, tập đọc và làm bài tập theo bộ sách Kết nối tri thức với cuộc sống.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
