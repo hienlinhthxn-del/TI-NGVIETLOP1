@@ -317,7 +317,12 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
       </div>
       
       <div className="mt-12 pt-12 border-t border-orange-100">
-        <AudioRecorder expectedText={lesson.passage || lesson.content} onFeedback={onFeedback} />
+        <AudioRecorder 
+          expectedText={
+            Array.isArray(lesson.passage) ? lesson.passage.join(' ') : (lesson.passage || lesson.content)
+          } 
+          onFeedback={onFeedback} 
+        />
         {aiFeedback && <FeedbackBox feedback={aiFeedback} />}
       </div>
     </motion.div>

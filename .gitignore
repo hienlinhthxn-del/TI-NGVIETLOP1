@@ -1,8 +1,13 @@
-node_modules/
-build/
-dist/
-coverage/
+# Dependencies
+node_modules
+
+# Build output
+dist
+build
+
+# Environment variables (QUAN TRỌNG: Không đẩy file này lên)
+.env
+.env.local
+
+# System files
 .DS_Store
-*.log
-.env*
-!.env.example

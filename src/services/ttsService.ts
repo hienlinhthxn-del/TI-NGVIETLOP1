@@ -1,8 +1,9 @@
 import { GoogleGenAI, Modality } from "@google/genai";
+import { apiKey } from "./geminiService";
 
 export async function generateSpeech(text: string): Promise<string | null> {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey: apiKey });
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
       contents: [{ parts: [{ text: `Đọc to và rõ ràng: ${text}` }] }],
