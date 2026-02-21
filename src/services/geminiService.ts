@@ -4,7 +4,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 // Trong các dự án React hiện đại (Vite, Create React App), các biến môi trường cần có tiền tố.
 // - Vite: VITE_
 // - Create React App: REACT_APP_
-export const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY;
+export const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (typeof process !== "undefined" ? process.env.REACT_APP_GEMINI_API_KEY : undefined);
 
 export const getGeminiModel = (modelName: string = "gemini-3-flash-preview") => {
   if (!apiKey) {

@@ -7,7 +7,7 @@ import { WordBuilder } from './components/WordBuilder';
 import { SampleAudioPlayer } from './components/SampleAudioPlayer';
 import { StudentAudioRecorder } from './components/StudentAudioRecorder';
 import { StudentAudioPlayer } from './components/StudentAudioPlayer';
-import { useProgress, ProgressDashboard } from './services/progressService';
+import { useProgress, ProgressDashboard, type ProgressData } from './services/progressService';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -53,6 +53,7 @@ export default function App() {
           <button onClick={() => { setRole(null); setSelectedLesson(null); }} className="p-2 hover:bg-orange-50 rounded-xl text-orange-600 transition-colors">
             <ArrowLeft size={24} />
           </button>
+        </div>
         <div className="flex items-center gap-4">
           {role === 'student' && (
             <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-indigo-50 rounded-2xl border border-indigo-100">
@@ -189,7 +190,16 @@ export default function App() {
   );
 }
 
-function RoleCard({ icon, title, desc, color, onClick, locked }: any) {
+interface RoleCardProps {
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+  color: 'blue' | 'emerald' | 'orange';
+  onClick: () => void;
+  locked?: boolean;
+}
+
+function RoleCard({ icon, title, desc, color, onClick, locked }: RoleCardProps) {
   return (
     <motion.button whileHover={{ y: -8 }} onClick={onClick} className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col items-center text-center group relative">
       {locked && <div className="absolute top-6 right-6 text-slate-300"><Lock size={20} /></div>}
@@ -203,7 +213,13 @@ function RoleCard({ icon, title, desc, color, onClick, locked }: any) {
   );
 }
 
-function TabBtn({ active, onClick, children }: any) {
+interface TabBtnProps {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}
+
+function TabBtn({ active, onClick, children }: TabBtnProps) {
   return (
     <button onClick={onClick} className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all", active ? "bg-white text-orange-600 shadow-sm" : "text-orange-900/60 hover:text-orange-600")}>
       {children}
@@ -211,7 +227,16 @@ function TabBtn({ active, onClick, children }: any) {
   );
 }
 
-function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesson, role }: any) {
+interface LessonContentProps {
+  lesson: Lesson;
+  progress: ProgressData;
+  onFeedback: (feedback: any) => void;
+  aiFeedback: any;
+  completeLesson: (id: string, score?: number, part?: string, index?: number) => void;
+  role: Role;
+}
+
+function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesson, role }: LessonContentProps) {
   const isTeacher = role === 'teacher';
   return (
     <motion.div key={lesson.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-sm border border-orange-50 min-h-[70vh] flex flex-col">
@@ -378,7 +403,7 @@ function WelcomeBox() {
   );
 }
 
-function TeacherDashboard({ progress }: { progress: any }) {
+function TeacherDashboard({ progress }: { progress: ProgressData }) {
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
 
   // Mock data for 29 students
@@ -589,7 +614,7 @@ function TeacherDashboard({ progress }: { progress: any }) {
   );
 }
 
-function ParentDashboard({ progress }: any) {
+function ParentDashboard({ progress }: { progress: ProgressData }) {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
       <h2 className="text-3xl font-black text-orange-900">Tiến độ học tập của con</h2>
