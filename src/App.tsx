@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { BookOpen, GraduationCap, Layout, ChevronRight, Star, Home, CheckCircle2, Trophy, Users, Baby, Lock, ArrowLeft, BarChart3, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { lessons, Lesson } from './data/lessons';
-import { AudioRecorder } from './components/AudioRecorder';
 import { QuizComponent } from './components/QuizComponent';
 import { WordBuilder } from './components/WordBuilder';
 import { SampleAudioPlayer } from './components/SampleAudioPlayer';
@@ -317,11 +316,13 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
       </div>
       
       <div className="mt-12 pt-12 border-t border-orange-100">
-        <AudioRecorder 
+        <h3 className="text-xl font-bold text-orange-900 mb-6">Luyện đọc toàn bài</h3>
+        <StudentAudioRecorder 
           expectedText={
             Array.isArray(lesson.passage) ? lesson.passage.join(' ') : (lesson.passage || lesson.content)
           } 
           onFeedback={onFeedback} 
+          recordingId={`student-${lesson.id}-full`}
         />
         {aiFeedback && <FeedbackBox feedback={aiFeedback} />}
       </div>
