@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, Loader2, Mic, Square, Trash2 } from 'lucide-react';
-import { generateSpeech } from '../services/ttsService';
 import { saveCustomAudio, getCustomAudio, deleteCustomAudio } from '../services/customAudioService';
 
 interface SampleAudioPlayerProps {
@@ -23,6 +22,14 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
     }
   }, [recordingId]);
 
+  // Tải danh sách giọng đọc của trình duyệt khi component được mount
+  useEffect(() => {
+    const loadVoices = () => window.speechSynthesis.getVoices();
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    return () => { window.speechSynthesis.onvoiceschanged = null; };
+  }, []);
+
   const checkCustomAudio = async () => {
     if (!recordingId) return;
     const audio = await getCustomAudio(recordingId);
@@ -44,24 +51,24 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
         }
       }
 
+      // Sử dụng Browser TTS (Giọng đọc có sẵn trên trình duyệt)
+      // Giải pháp này ổn định hơn, không tốn phí API và không bị lỗi model
       const textToSpeak = Array.isArray(text) ? text.join(' ') : text;
-      const base64Audio = await generateSpeech(textToSpeak);
       
-      // Chuyển đổi Base64 thành Blob (WAV) để trình duyệt tự xử lý
-      // Quan trọng: Loại bỏ khoảng trắng/xuống dòng trong chuỗi Base64 để tránh lỗi
-      const binaryString = window.atob(base64Audio.replace(/\s/g, ''));
-      const len = binaryString.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
+      window.speechSynthesis.cancel(); // Dừng giọng đọc cũ nếu có
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.lang = 'vi-VN'; // Thiết lập tiếng Việt
+      utterance.rate = 0.9; // Đọc chậm rãi một chút cho học sinh lớp 1
+      
+      // Cố gắng chọn giọng tiếng Việt chuẩn nếu có
+      const voices = window.speechSynthesis.getVoices();
+      const viVoice = voices.find(v => v.lang.includes('vi'));
+      if (viVoice) utterance.voice = viVoice;
 
-      const blob = new Blob([bytes], { type: 'audio/wav' });
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
+      utterance.onend = () => setIsLoading(false);
+      utterance.onerror = () => setIsLoading(false);
       
-      audio.onended = () => URL.revokeObjectURL(url);
-      await audio.play();
+      window.speechSynthesis.speak(utterance);
 
     } catch (err) {
       console.error("Audio Playback Error:", err);
