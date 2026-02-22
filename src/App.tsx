@@ -20,6 +20,7 @@ type Role = 'student' | 'teacher' | 'parent' | null;
 export default function App() {
   const [role, setRole] = useState<Role>(null);
   const [activeTab, setActiveTab] = useState<'tap1' | 'tap2'>('tap1');
+  const [teacherView, setTeacherView] = useState<'lessons' | 'dashboard'>('lessons');
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [aiFeedback, setAiFeedback] = useState<{ transcription: string; feedback: string; accuracy: number } | null>(null);
   const { progress, completeLesson, setUsername } = useProgress();
@@ -39,7 +40,7 @@ export default function App() {
         </motion.div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl w-full">
           <RoleCard icon={<Baby size={48} />} title="Học Sinh" desc="Em muốn luyện đọc" color="blue" onClick={() => setRole('student')} />
-          <RoleCard icon={<GraduationCap size={48} />} title="Giáo Viên" desc="Quản lý lớp học" color="emerald" locked onClick={() => setRole('teacher')} />
+          <RoleCard icon={<GraduationCap size={48} />} title="Giáo Viên" desc="Soạn bài & Quản lý" color="emerald" onClick={() => setRole('teacher')} />
           <RoleCard icon={<Users size={48} />} title="Phụ Huynh" desc="Theo dõi con học" color="orange" onClick={() => setRole('parent')} />
         </div>
       </div>
@@ -88,7 +89,7 @@ export default function App() {
             </div>
           </div>
         </div>
-        {role === 'student' && (
+        {(role === 'student' || (role === 'teacher' && teacherView === 'lessons')) && (
           <nav className="hidden md:flex items-center gap-1 bg-orange-50 p-1 rounded-2xl">
             <TabBtn active={activeTab === 'tap1'} onClick={() => { setActiveTab('tap1'); setSelectedLesson(null); }}>Tập 1</TabBtn>
             <TabBtn active={activeTab === 'tap2'} onClick={() => { setActiveTab('tap2'); setSelectedLesson(null); }}>Tập 2</TabBtn>
@@ -183,7 +184,46 @@ export default function App() {
           </div>
         )}
 
-        {role === 'teacher' && <TeacherDashboard progress={progress} />}
+        {role === 'teacher' && (
+          <>
+            <div className="flex items-center gap-2 mb-6 border-b border-slate-200">
+              <button onClick={() => setTeacherView('lessons')} className={cn('py-3 px-4 font-bold', teacherView === 'lessons' ? 'text-emerald-600 border-b-2 border-emerald-500' : 'text-slate-500')}>
+                Nội dung bài học
+              </button>
+              <button onClick={() => setTeacherView('dashboard')} className={cn('py-3 px-4 font-bold', teacherView === 'dashboard' ? 'text-emerald-600 border-b-2 border-emerald-500' : 'text-slate-500')}>
+                Bảng điều khiển lớp
+              </button>
+            </div>
+
+            {teacherView === 'lessons' ? (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className="lg:col-span-4 space-y-6">
+                  <div className="bg-white rounded-3xl p-6 shadow-sm border border-orange-50">
+                    <h2 className="text-lg font-bold text-orange-900 mb-4">{activeTab === 'tap1' ? '83 Bài Âm Vần' : 'Chủ đề Tập Đọc'}</h2>
+                    <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                      {filteredLessons.map((lesson) => (
+                        <button key={lesson.id} onClick={() => { setSelectedLesson(lesson); setAiFeedback(null); }}
+                          className={cn("w-full text-left p-4 rounded-2xl transition-all flex items-center justify-between group",
+                            selectedLesson?.id === lesson.id ? "bg-orange-500 text-white shadow-lg" : "bg-white hover:bg-orange-50")}>
+                          <div className="flex flex-col">
+                            <span className={cn("text-xs font-bold uppercase opacity-70", selectedLesson?.id === lesson.id ? "text-white" : "text-orange-600")}>{lesson.type === 'vowel' ? 'Âm' : lesson.type === 'rhyme' ? 'Vần' : 'Bài đọc'}</span>
+                            <span className="font-bold text-sm">{lesson.title}</span>
+                          </div>
+                          <ChevronRight size={18} className={cn("transition-transform", selectedLesson?.id === lesson.id ? "translate-x-1" : "opacity-0 group-hover:opacity-100")} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="lg:col-span-8">
+                  <AnimatePresence mode="wait">
+                    {selectedLesson ? <LessonContent lesson={selectedLesson} progress={progress} onFeedback={(f) => { setAiFeedback(f); completeLesson(selectedLesson.id, f.accuracy); }} aiFeedback={aiFeedback} completeLesson={completeLesson} role={role} /> : <WelcomeBox />}
+                  </AnimatePresence>
+                </div>
+              </div>
+            ) : <TeacherDashboard progress={progress} />}
+          </>
+        )}
         {role === 'parent' && <ParentDashboard progress={progress} />}
       </main>
     </div>
