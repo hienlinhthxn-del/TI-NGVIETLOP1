@@ -6,12 +6,12 @@ import { GoogleGenAI, Type } from "@google/genai";
 // - Create React App: REACT_APP_
 
 // Sử dụng key dự phòng nếu không tìm thấy biến môi trường
-const HARDCODED_KEY = ""; // Để trống. Bạn CẦN cấu hình key trong file .env
+const HARDCODED_KEY = ""; // Nếu file .env không hoạt động, bạn có thể dán trực tiếp API Key vào trong dấu ngoặc kép này.
 export const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || (typeof process !== "undefined" ? process.env.REACT_APP_GEMINI_API_KEY : undefined) || HARDCODED_KEY;
 
 export const getGeminiModel = (modelName: string = "gemini-2.0-flash-exp") => {
-  if (!apiKey) {
-    console.warn("GEMINI_API_KEY is not set. AI features will be disabled.");
+  if (!apiKey || apiKey.includes("DAN_KEY_CUA_BAN_VAO_DAY")) {
+    console.warn("GEMINI_API_KEY chưa được cấu hình đúng.");
     return null;
   }
   const genAI = new GoogleGenAI({ apiKey });

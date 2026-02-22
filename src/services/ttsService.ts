@@ -3,8 +3,8 @@ import { apiKey } from "./geminiService";
 
 export async function generateSpeech(text: string): Promise<string> {
   try {
-    if (!apiKey) {
-      throw new Error("Chưa có API Key. Vui lòng tạo file .env và thêm VITE_GEMINI_API_KEY.");
+    if (!apiKey || apiKey.includes("DAN_KEY_CUA_BAN_VAO_DAY")) {
+      throw new Error("Vui lòng mở file .env và dán API Key thật của bạn vào.");
     }
 
     const ai = new GoogleGenAI({ apiKey: apiKey });
