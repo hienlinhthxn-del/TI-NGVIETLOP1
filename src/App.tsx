@@ -7,6 +7,7 @@ import { WordBuilder } from './components/WordBuilder';
 import { SampleAudioPlayer } from './components/SampleAudioPlayer';
 import { StudentAudioRecorder } from './components/StudentAudioRecorder';
 import { StudentAudioPlayer } from './components/StudentAudioPlayer';
+import { MatchingExercise } from './components/MatchingExercise';
 import { useProgress, ProgressDashboard, type ProgressData } from './services/progressService';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -437,6 +438,7 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
           <div className="mt-8">
             {lesson.exercise.type === 'word-builder' && <WordBuilder word={lesson.exercise.data.word} parts={lesson.exercise.data.parts} onComplete={(score) => completeLesson(lesson.id, score)} />}
             {lesson.exercise.type === 'fill-blank' && <FillBlankExercise data={lesson.exercise.data} onComplete={(score) => completeLesson(lesson.id, score)} />}
+            {lesson.exercise.type === 'matching' && <MatchingExercise data={lesson.exercise.data} onComplete={(score) => completeLesson(lesson.id, score)} />}
           </div>
         )}
         
