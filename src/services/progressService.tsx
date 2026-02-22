@@ -25,6 +25,11 @@ export interface ProgressData {
   username: string;
 }
 
+export interface UserProfile {
+  id: string;
+  name: string;
+}
+
 const INITIAL_BADGES: Badge[] = [
   { id: 'first_step', name: 'Bước đầu tiên', icon: '🌱', description: 'Hoàn thành bài học đầu tiên', unlocked: false },
   { id: 'star_student', name: 'Học sinh gương mẫu', icon: '⭐', description: 'Đạt điểm 100 trong một bài học', unlocked: false },
@@ -33,20 +38,44 @@ const INITIAL_BADGES: Badge[] = [
 ];
 
 export const useProgress = () => {
-  const [progress, setProgress] = useState<ProgressData>(() => {
-    const saved = localStorage.getItem('hành-trang-lớp-1-progress');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return {
-        completedLessons: parsed.completedLessons || [],
-        scores: parsed.scores || {},
-        detailedScores: parsed.detailedScores || {},
-        lastActivity: parsed.lastActivity || new Date().toISOString(),
-        points: parsed.points || 0,
-        badges: parsed.badges || INITIAL_BADGES,
-        username: parsed.username || `Bé ${Math.floor(Math.random() * 1000)}`
-      };
+  // Quản lý danh sách người dùng
+  const [users, setUsers] = useState<UserProfile[]>(() => {
+    try {
+      const saved = localStorage.getItem('htl1-users');
+      if (saved) return JSON.parse(saved);
+    } catch (e) { console.error(e); }
+    return [{ id: 'default', name: 'Bé yêu' }];
+  });
+
+  // ID người dùng hiện tại
+  const [currentUserId, setCurrentUserId] = useState<string>(() => {
+    return localStorage.getItem('htl1-current-user-id') || 'default';
+  });
+
+  // Hàm tải dữ liệu tiến độ cho một user cụ thể
+  const loadProgress = (userId: string, userList: UserProfile[]): ProgressData => {
+    const key = `htl1-progress-${userId}`;
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (!parsed.badges) parsed.badges = INITIAL_BADGES;
+        return parsed;
+      }
+    } catch (e) { console.error(e); }
+
+    // Migration: Nếu là user mặc định và chưa có dữ liệu mới, thử tải dữ liệu cũ
+    if (userId === 'default') {
+      try {
+        const oldSaved = localStorage.getItem('hành-trang-lớp-1-progress');
+        if (oldSaved) {
+          const parsed = JSON.parse(oldSaved);
+          return { ...parsed, badges: parsed.badges || INITIAL_BADGES };
+        }
+      } catch (e) { console.error(e); }
     }
+
+    const user = userList.find(u => u.id === userId);
     return {
       completedLessons: [],
       scores: {},
@@ -54,12 +83,25 @@ export const useProgress = () => {
       lastActivity: new Date().toISOString(),
       points: 0,
       badges: INITIAL_BADGES,
-      username: `Bé ${Math.floor(Math.random() * 1000)}`
+      username: user ? user.name : 'Bé yêu'
     };
-  });
+  };
 
+  const [progress, setProgress] = useState<ProgressData>(() => loadProgress(currentUserId, users));
+
+  // Lưu danh sách users khi thay đổi
   useEffect(() => {
-    localStorage.setItem('hành-trang-lớp-1-progress', JSON.stringify(progress));
+    localStorage.setItem('htl1-users', JSON.stringify(users));
+  }, [users]);
+
+  // Lưu ID user hiện tại
+  useEffect(() => {
+    localStorage.setItem('htl1-current-user-id', currentUserId);
+  }, [currentUserId]);
+
+  // Lưu tiến độ của user hiện tại
+  useEffect(() => {
+    localStorage.setItem(`htl1-progress-${currentUserId}`, JSON.stringify(progress));
     
     // Sync with leaderboard
     const syncLeaderboard = async () => {
@@ -74,14 +116,44 @@ export const useProgress = () => {
           })
         });
       } catch (e) {
-        console.error("Failed to sync leaderboard", e);
+        // console.error("Failed to sync leaderboard", e);
       }
     };
     
     if (progress.points > 0) {
       syncLeaderboard();
     }
-  }, [progress]);
+  }, [progress, currentUserId]);
+
+  const addUser = (name: string) => {
+    const newUser = { id: Date.now().toString(), name };
+    const newUsers = [...users, newUser];
+    setUsers(newUsers);
+    setCurrentUserId(newUser.id);
+    setProgress(loadProgress(newUser.id, newUsers));
+  };
+
+  const switchUser = (userId: string) => {
+    if (userId === currentUserId) return;
+    setCurrentUserId(userId);
+    setProgress(loadProgress(userId, users));
+  };
+
+  const deleteUser = (userId: string) => {
+    if (users.length <= 1) {
+      alert("Không thể xóa người dùng cuối cùng!");
+      return;
+    }
+    const newUsers = users.filter(u => u.id !== userId);
+    setUsers(newUsers);
+    localStorage.removeItem(`htl1-progress-${userId}`);
+    
+    if (currentUserId === userId) {
+      const nextUser = newUsers[0];
+      setCurrentUserId(nextUser.id);
+      setProgress(loadProgress(nextUser.id, newUsers));
+    }
+  };
 
   const completeLesson = (lessonId: string, score?: number, part?: string, partIndex?: number) => {
     setProgress(prev => {
@@ -160,9 +232,10 @@ export const useProgress = () => {
 
   const setUsername = (name: string) => {
     setProgress(prev => ({ ...prev, username: name }));
+    setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, name } : u));
   };
 
-  return { progress, completeLesson, setUsername };
+  return { progress, completeLesson, setUsername, users, currentUserId, addUser, switchUser, deleteUser };
 };
 
 export const ProgressDashboard: React.FC<{ progress: ProgressData }> = ({ progress }) => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, GraduationCap, Layout, ChevronRight, Star, Home, CheckCircle2, Trophy, Users, Baby, Lock, ArrowLeft, BarChart3, Settings } from 'lucide-react';
+import { BookOpen, GraduationCap, Layout, ChevronRight, Star, Home, CheckCircle2, Trophy, Users, Baby, Lock, ArrowLeft, BarChart3, Settings, Plus, Trash2, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { lessons, Lesson } from './data/lessons';
 import { QuizComponent } from './components/QuizComponent';
@@ -23,9 +23,11 @@ export default function App() {
   const [teacherView, setTeacherView] = useState<'lessons' | 'dashboard'>('lessons');
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [aiFeedback, setAiFeedback] = useState<{ transcription: string; feedback: string; accuracy: number } | null>(null);
-  const { progress, completeLesson, setUsername } = useProgress();
+  const { progress, completeLesson, setUsername, users, currentUserId, addUser, switchUser, deleteUser } = useProgress();
   const [showSettings, setShowSettings] = useState(false);
   const [newUsername, setNewUsername] = useState(progress.username);
+  const [isAddingUser, setIsAddingUser] = useState(false);
+  const [newProfileName, setNewProfileName] = useState('');
 
   const filteredLessons = lessons.filter(l => 
     activeTab === 'tap1' ? l.book === 1 : l.book === 2
@@ -72,7 +74,7 @@ export default function App() {
               className="p-2 hover:bg-slate-100 rounded-xl text-slate-500 transition-colors relative group"
             >
               <Settings size={24} />
-              <span className="absolute top-full right-0 mt-2 px-2 py-1 bg-slate-900 text-white text-[10px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">Cài đặt</span>
+              <span className="absolute top-full right-0 mt-2 px-2 py-1 bg-slate-900 text-white text-[10px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">Tài khoản</span>
             </button>
           )}
 
@@ -101,32 +103,98 @@ export default function App() {
         <AnimatePresence>
           {showSettings && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-6">
-              <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl">
-                <h2 className="text-2xl font-black text-slate-900 mb-6">Cài đặt tài khoản</h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Tên của em</label>
-                    <input 
-                      type="text" 
-                      value={newUsername} 
-                      onChange={(e) => setNewUsername(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"
-                      placeholder="Nhập tên của em..."
-                    />
+              <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl max-h-[80vh] overflow-y-auto custom-scrollbar">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-black text-slate-900">Quản lý tài khoản</h2>
+                  <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400">✕</button>
+                </div>
+                
+                <div className="space-y-6">
+                  {/* Đổi tên user hiện tại */}
+                  <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
+                    <label className="block text-xs font-bold text-indigo-400 uppercase tracking-widest mb-2">Đang học: {progress.username}</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={newUsername} 
+                        onChange={(e) => setNewUsername(e.target.value)}
+                        className="flex-1 px-4 py-2 bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-indigo-900"
+                        placeholder="Đổi tên..."
+                      />
+                      <button 
+                        onClick={() => { setUsername(newUsername); alert("Đã đổi tên thành công!"); }}
+                        className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700"
+                      >
+                        <Check size={20} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="pt-4 flex gap-3">
-                    <button 
-                      onClick={() => setShowSettings(false)}
-                      className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-colors"
-                    >
-                      Hủy
-                    </button>
-                    <button 
-                      onClick={() => { setUsername(newUsername); setShowSettings(false); }}
-                      className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
-                    >
-                      Lưu lại
-                    </button>
+
+                  {/* Danh sách users */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-bold text-slate-700">Danh sách học sinh</h3>
+                      <button 
+                        onClick={() => setIsAddingUser(!isAddingUser)}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                      >
+                        <Plus size={14} /> Thêm mới
+                      </button>
+                    </div>
+
+                    {isAddingUser && (
+                      <div className="mb-4 flex gap-2 animate-in fade-in slide-in-from-top-2">
+                        <input 
+                          type="text" 
+                          value={newProfileName}
+                          onChange={(e) => setNewProfileName(e.target.value)}
+                          className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                          placeholder="Tên học sinh mới..."
+                          autoFocus
+                        />
+                        <button 
+                          onClick={() => {
+                            if (newProfileName.trim()) {
+                              addUser(newProfileName.trim());
+                              setNewProfileName('');
+                              setIsAddingUser(false);
+                            }
+                          }}
+                          className="px-4 py-2 bg-emerald-500 text-white rounded-xl font-bold text-sm hover:bg-emerald-600"
+                        >
+                          Thêm
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      {users.map(user => (
+                        <div key={user.id} className={cn("flex items-center justify-between p-3 rounded-xl border transition-all", 
+                          user.id === currentUserId ? "bg-indigo-50 border-indigo-200 shadow-sm" : "bg-white border-slate-100 hover:border-indigo-200")}>
+                          <button 
+                            onClick={() => switchUser(user.id)}
+                            className="flex items-center gap-3 flex-1 text-left"
+                          >
+                            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold", 
+                              user.id === currentUserId ? "bg-indigo-500 text-white" : "bg-slate-100 text-slate-500")}>
+                              {user.name[0].toUpperCase()}
+                            </div>
+                            <span className={cn("font-bold text-sm", user.id === currentUserId ? "text-indigo-900" : "text-slate-600")}>
+                              {user.name} {user.id === currentUserId && "(Em)"}
+                            </span>
+                          </button>
+                          
+                          {users.length > 1 && (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); if(confirm(`Xóa học sinh ${user.name}?`)) deleteUser(user.id); }}
+                              className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </motion.div>
