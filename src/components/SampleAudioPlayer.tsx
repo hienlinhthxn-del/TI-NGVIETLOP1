@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, Loader2, Mic, Square, Trash2 } from 'lucide-react';
+import { Volume2, Loader2, Mic, Square, Trash2, Upload } from 'lucide-react';
 import { saveCustomAudio, getCustomAudio, deleteCustomAudio } from '../services/customAudioService';
 
 interface SampleAudioPlayerProps {
@@ -15,6 +15,7 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
   const [hasCustomAudio, setHasCustomAudio] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (recordingId) {
@@ -121,6 +122,14 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
     }
   };
 
+  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && recordingId) {
+      await saveCustomAudio(recordingId, file);
+      setHasCustomAudio(true);
+    }
+  };
+
   return (
     <div className="flex items-center gap-2">
       <button
@@ -131,7 +140,7 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
             ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-200' 
             : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
         }`}
-        title={hasCustomAudio ? "Nghe giọng giáo viên" : "Nghe giọng AI"}
+        title={hasCustomAudio ? "Nghe giọng giáo viên (Đã sửa)" : "Nghe giọng AI"}
       >
         {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Volume2 size={18} />}
         {hasCustomAudio ? "Giáo viên" : label}
@@ -148,13 +157,29 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
               <Square size={18} />
             </button>
           ) : (
-            <button
-              onClick={startRecording}
-              className="p-2 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200"
-              title="Ghi âm giọng mẫu"
-            >
-              <Mic size={18} />
-            </button>
+            <>
+              <button
+                onClick={startRecording}
+                className="p-2 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200"
+                title="Ghi âm giọng mẫu"
+              >
+                <Mic size={18} />
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="p-2 bg-purple-100 text-purple-700 rounded-xl hover:bg-purple-200"
+                title="Tải lên file ghi âm"
+              >
+                <Upload size={18} />
+              </button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleUpload}
+                accept="audio/*"
+                className="hidden"
+              />
+            </>
           )}
           
           {hasCustomAudio && !isRecording && (
