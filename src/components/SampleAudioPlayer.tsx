@@ -46,28 +46,27 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
 
       const textToSpeak = Array.isArray(text) ? text.join(' ') : text;
       const base64Audio = await generateSpeech(textToSpeak);
-      if (base64Audio) {
-        // Chuyển đổi Base64 thành Blob (WAV) để trình duyệt tự xử lý
-        // Quan trọng: Loại bỏ khoảng trắng/xuống dòng trong chuỗi Base64 để tránh lỗi
-        const binaryString = window.atob(base64Audio.replace(/\s/g, ''));
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-
-        const blob = new Blob([bytes], { type: 'audio/wav' });
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        
-        audio.onended = () => URL.revokeObjectURL(url);
-        await audio.play();
-      } else {
-        console.error("TTS: Không nhận được dữ liệu âm thanh.");
-        alert("Không thể đọc mẫu. Vui lòng kiểm tra API Key trong Console.");
+      
+      // Chuyển đổi Base64 thành Blob (WAV) để trình duyệt tự xử lý
+      // Quan trọng: Loại bỏ khoảng trắng/xuống dòng trong chuỗi Base64 để tránh lỗi
+      const binaryString = window.atob(base64Audio.replace(/\s/g, ''));
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
       }
+
+      const blob = new Blob([bytes], { type: 'audio/wav' });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      
+      audio.onended = () => URL.revokeObjectURL(url);
+      await audio.play();
+
     } catch (err) {
       console.error("Audio Playback Error:", err);
+      // Hiển thị lỗi cụ thể cho người dùng
+      alert(err instanceof Error ? err.message : "Không thể phát âm thanh");
     }
     setIsLoading(false);
   };
