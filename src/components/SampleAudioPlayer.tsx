@@ -47,27 +47,24 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
       const textToSpeak = Array.isArray(text) ? text.join(' ') : text;
       const base64Audio = await generateSpeech(textToSpeak);
       if (base64Audio) {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-        const binaryString = window.atob(base64Audio);
+        // Chuyển đổi Base64 thành Blob (WAV) để trình duyệt tự xử lý
+        // Quan trọng: Loại bỏ khoảng trắng/xuống dòng trong chuỗi Base64 để tránh lỗi
+        const binaryString = window.atob(base64Audio.replace(/\s/g, ''));
         const len = binaryString.length;
         const bytes = new Uint8Array(len);
         for (let i = 0; i < len; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
+
+        const blob = new Blob([bytes], { type: 'audio/wav' });
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
         
-        const pcmData = new Int16Array(bytes.buffer);
-        const float32Data = new Float32Array(pcmData.length);
-        for (let i = 0; i < pcmData.length; i++) {
-          float32Data[i] = pcmData[i] / 32768;
-        }
-
-        const buffer = audioContext.createBuffer(1, float32Data.length, 24000);
-        buffer.getChannelData(0).set(float32Data);
-
-        const source = audioContext.createBufferSource();
-        source.buffer = buffer;
-        source.connect(audioContext.destination);
-        source.start();
+        audio.onended = () => URL.revokeObjectURL(url);
+        await audio.play();
+      } else {
+        console.error("TTS: Không nhận được dữ liệu âm thanh.");
+        alert("Không thể đọc mẫu. Vui lòng kiểm tra API Key trong Console.");
       }
     } catch (err) {
       console.error("Audio Playback Error:", err);
