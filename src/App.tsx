@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, GraduationCap, Layout, ChevronRight, Star, Home, CheckCircle2, Trophy, Users, Baby, Lock, ArrowLeft, BarChart3, Settings, Plus, Trash2, Check } from 'lucide-react';
+import { BookOpen, GraduationCap, Layout, ChevronRight, Star, Home, CheckCircle2, Trophy, Users, Baby, Lock, ArrowLeft, BarChart3, Settings, Plus, Trash2, Check, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { lessons, Lesson } from './data/lessons';
 import { QuizComponent } from './components/QuizComponent';
@@ -446,6 +446,36 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
             <QuizComponent questions={lesson.quiz} onComplete={(score) => completeLesson(lesson.id, score)} />
           </div>
         )}
+
+        {/* Góc Vận Dụng */}
+        <div className="mt-12">
+          <h3 className="text-xl font-bold text-orange-900 mb-6 flex items-center gap-2">
+            <Sparkles className="text-yellow-500" /> Góc Vận Dụng
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-yellow-50 p-6 rounded-3xl border border-yellow-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <Star size={100} />
+              </div>
+              <h4 className="font-bold text-yellow-800 mb-2 text-lg">Thám tử tìm chữ</h4>
+              <p className="text-yellow-900/80 font-medium">
+                Em hãy tìm 3 đồ vật trong nhà có tên chứa âm <span className="text-2xl font-black text-orange-500 mx-1">{lesson.content}</span>
+              </p>
+            </div>
+            
+            {lesson.examples.length > 0 && (
+              <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <BookOpen size={100} />
+                </div>
+                <h4 className="font-bold text-blue-800 mb-2 text-lg">Nhà văn nhí</h4>
+                <p className="text-blue-900/80 font-medium">
+                  Đặt một câu với từ <span className="text-xl font-black text-blue-600 mx-1">{lesson.examples[0]}</span> và kể cho ba mẹ nghe.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
       
       <div className="mt-12 pt-12 border-t border-orange-100">
