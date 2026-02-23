@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, GraduationCap, Layout, ChevronRight, Star, Home, CheckCircle2, Trophy, Users, Baby, Lock, ArrowLeft, BarChart3, Settings, Plus, Trash2, Check, Sparkles } from 'lucide-react';
+import { BookOpen, GraduationCap, Layout, ChevronRight, Star, Home, CheckCircle2, Trophy, Users, Baby, Lock, ArrowLeft, BarChart3, Settings, Plus, Trash2, Check, Sparkles, Bell, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { lessons, Lesson } from './data/lessons';
 import { QuizComponent } from './components/QuizComponent';
@@ -8,7 +8,7 @@ import { SampleAudioPlayer } from './components/SampleAudioPlayer';
 import { StudentAudioRecorder } from './components/StudentAudioRecorder';
 import { StudentAudioPlayer } from './components/StudentAudioPlayer';
 import { MatchingExercise } from './components/MatchingExercise';
-import { useProgress, ProgressDashboard, type ProgressData } from './services/progressService';
+import { useProgress, useAssignments, ProgressDashboard, type ProgressData, type Assignment } from './services/progressService';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -29,6 +29,8 @@ export default function App() {
   const [newUsername, setNewUsername] = useState(progress.username);
   const [isAddingUser, setIsAddingUser] = useState(false);
   const [newProfileName, setNewProfileName] = useState('');
+  const { assignments, assignLesson } = useAssignments();
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const filteredLessons = lessons.filter(l => 
     activeTab === 'tap1' ? l.book === 1 : l.book === 2
@@ -59,6 +61,35 @@ export default function App() {
           </button>
         </div>
         <div className="flex items-center gap-4">
+          {/* Notification Bell for Student and Parent */}
+          {(role === 'student' || role === 'parent') && (
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="p-2 hover:bg-orange-50 rounded-xl text-orange-600 transition-colors relative"
+              >
+                <Bell size={24} />
+                {assignments.length > 0 && (
+                  <span className="absolute top-1 right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                )}
+              </button>
+              
+              <AnimatePresence>
+                {showNotifications && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-orange-100 p-4 z-50">
+                    <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2"><Bell size={16} className="text-orange-500"/> Thông báo từ giáo viên</h3>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {assignments.length === 0 ? <p className="text-sm text-slate-400 italic">Chưa có thông báo mới.</p> : assignments.map(a => {
+                        const l = lessons.find(ls => ls.id === a.lessonId);
+                        return <div key={a.id} className="text-sm p-3 bg-orange-50 rounded-xl border border-orange-100"><div className="font-bold text-orange-800">{a.message}</div><div className="text-slate-600">Bài: {l?.title}</div><div className="text-xs text-slate-400 mt-1">{new Date(a.timestamp).toLocaleDateString('vi-VN')}</div></div>
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
           {role === 'student' && (
             <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-indigo-50 rounded-2xl border border-indigo-100">
               <div className="flex flex-col items-end">
@@ -235,6 +266,8 @@ export default function App() {
                     aiFeedback={aiFeedback} 
                     completeLesson={completeLesson} 
                     role={role}
+                    assignLesson={assignLesson}
+                    assignments={assignments}
                   />
                 ) : (
                   <WelcomeBox />
@@ -286,7 +319,7 @@ export default function App() {
                 </div>
                 <div className="lg:col-span-8">
                   <AnimatePresence mode="wait">
-                    {selectedLesson ? <LessonContent lesson={selectedLesson} progress={progress} onFeedback={(f) => { setAiFeedback(f); completeLesson(selectedLesson.id, f.accuracy); }} aiFeedback={aiFeedback} completeLesson={completeLesson} role={role} /> : <WelcomeBox />}
+                    {selectedLesson ? <LessonContent lesson={selectedLesson} progress={progress} onFeedback={(f) => { setAiFeedback(f); completeLesson(selectedLesson.id, f.accuracy); }} aiFeedback={aiFeedback} completeLesson={completeLesson} role={role} assignLesson={assignLesson} assignments={assignments} /> : <WelcomeBox />}
                   </AnimatePresence>
                 </div>
               </div>
@@ -343,15 +376,20 @@ interface LessonContentProps {
   aiFeedback: any;
   completeLesson: (id: string, score?: number, part?: string, index?: number) => void;
   role: Role;
+  assignLesson: (id: string) => void;
+  assignments: Assignment[];
 }
 
-function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesson, role }: LessonContentProps) {
+function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesson, role, assignLesson, assignments }: LessonContentProps) {
   const isTeacher = role === 'teacher';
+  const isAssigned = assignments.some(a => a.lessonId === lesson.id);
+
   return (
     <motion.div key={lesson.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-sm border border-orange-50 min-h-[70vh] flex flex-col">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-bold uppercase tracking-widest">{lesson.book === 1 ? 'Tập 1' : 'Tập 2'}</span>
+          {isAssigned && <span className="px-3 py-1 bg-red-100 text-red-600 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-1"><Bell size={12} /> Bài tập về nhà</span>}
           {lesson.topic && <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">{lesson.topic}</span>}
         </div>
         {progress.completedLessons.includes(lesson.id) && <div className="flex items-center gap-1 text-green-600 font-bold text-sm"><CheckCircle2 size={16} /> Đã xong</div>}
@@ -452,6 +490,16 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
         )}
 
         {/* Góc Vận Dụng */}
+        {isTeacher && (
+          <div className="mt-8 p-6 bg-slate-50 rounded-3xl border border-slate-200 flex items-center justify-between">
+            <div>
+              <h4 className="font-bold text-slate-900">Giao bài tập này</h4>
+              <p className="text-sm text-slate-500">Học sinh và phụ huynh sẽ nhận được thông báo.</p>
+            </div>
+            <button onClick={() => assignLesson(lesson.id)} disabled={isAssigned} className={cn("px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all", isAssigned ? "bg-slate-200 text-slate-500 cursor-not-allowed" : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200")}>{isAssigned ? <Check size={20} /> : <Bell size={20} />} {isAssigned ? "Đã giao" : "Giao bài về nhà"}</button>
+          </div>
+        )}
+
         <div className="mt-12">
           <h3 className="text-xl font-bold text-orange-900 mb-6 flex items-center gap-2">
             <Sparkles className="text-yellow-500" /> Góc Vận Dụng
@@ -757,10 +805,39 @@ function TeacherDashboard({ progress }: { progress: ProgressData }) {
 }
 
 function ParentDashboard({ progress }: { progress: ProgressData }) {
+  const { assignments } = useAssignments();
+
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
       <h2 className="text-3xl font-black text-orange-900">Tiến độ học tập của con</h2>
       <ProgressDashboard progress={progress} />
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-white p-8 rounded-[2.5rem] border border-red-50 shadow-sm">
+          <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2"><Bell className="text-red-500" /> Bài tập giáo viên giao</h3>
+          <div className="space-y-3">
+            {assignments.length === 0 ? (
+              <div className="text-center py-8 text-slate-400 italic">Không có bài tập nào được giao.</div>
+            ) : (
+              assignments.map(a => {
+                const lesson = lessons.find(l => l.id === a.lessonId);
+                const isCompleted = progress.completedLessons.includes(a.lessonId);
+                return (
+                  <div key={a.id} className={cn("p-4 rounded-2xl border flex items-center justify-between", isCompleted ? "bg-green-50 border-green-100" : "bg-white border-red-100")}>
+                    <div>
+                      <div className="font-bold text-slate-900">{lesson?.title}</div>
+                      <div className="text-xs text-slate-500 flex items-center gap-1"><Calendar size={12}/> {new Date(a.timestamp).toLocaleDateString('vi-VN')}</div>
+                    </div>
+                    <div className={cn("px-3 py-1 rounded-full text-xs font-bold", isCompleted ? "bg-green-200 text-green-800" : "bg-red-100 text-red-600")}>
+                      {isCompleted ? "Đã xong" : "Chưa làm"}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
+
       <div className="bg-white p-8 rounded-[2.5rem] border border-orange-50 shadow-sm">
         <h3 className="text-xl font-bold text-orange-900 mb-6">Bài học đã hoàn thành</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -775,6 +852,7 @@ function ParentDashboard({ progress }: { progress: ProgressData }) {
           })}
           {progress.completedLessons.length === 0 && <div className="col-span-2 text-center py-12 text-gray-400 italic">Con chưa hoàn thành bài học nào.</div>}
         </div>
+      </div>
       </div>
     </motion.div>
   );

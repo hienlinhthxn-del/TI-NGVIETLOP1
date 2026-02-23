@@ -25,6 +25,13 @@ export interface ProgressData {
   username: string;
 }
 
+export interface Assignment {
+  id: string;
+  lessonId: string;
+  timestamp: string;
+  message: string;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -236,6 +243,38 @@ export const useProgress = () => {
   };
 
   return { progress, completeLesson, setUsername, users, currentUserId, addUser, switchUser, deleteUser };
+};
+
+export const useAssignments = () => {
+  const [assignments, setAssignments] = useState<Assignment[]>(() => {
+    try {
+      const saved = localStorage.getItem('htl1-assignments');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) { return []; }
+  });
+
+  const assignLesson = (lessonId: string, message: string = "Bài tập về nhà") => {
+    const newAssignment: Assignment = {
+      id: Date.now().toString(),
+      lessonId,
+      timestamp: new Date().toISOString(),
+      message
+    };
+    
+    // Kiểm tra xem bài này đã được giao chưa để tránh trùng lặp
+    if (!assignments.some(a => a.lessonId === lessonId)) {
+      const newAssignments = [newAssignment, ...assignments];
+      setAssignments(newAssignments);
+      localStorage.setItem('htl1-assignments', JSON.stringify(newAssignments));
+      alert("Đã giao bài thành công! Học sinh và phụ huynh sẽ nhận được thông báo.");
+    } else {
+      alert("Bài học này đã được giao trước đó.");
+    }
+  };
+
+  // Hàm xóa bài tập (dành cho giáo viên nếu cần - optional)
+  
+  return { assignments, assignLesson };
 };
 
 export const ProgressDashboard: React.FC<{ progress: ProgressData }> = ({ progress }) => {
