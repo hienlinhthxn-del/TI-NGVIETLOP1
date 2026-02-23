@@ -358,25 +358,27 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
       </div>
       <h2 className="text-4xl md:text-5xl font-black text-orange-900 mb-8 tracking-tight">{lesson.title}</h2>
       <div className="flex-grow space-y-12">
-        <div className="flex flex-col items-center justify-center p-12 bg-orange-50/50 rounded-[2rem] border-2 border-dashed border-orange-200">
-          <div className="text-8xl md:text-9xl font-black text-orange-600 drop-shadow-sm">{lesson.content}</div>
-          <p className="mt-4 text-orange-900/50 font-medium italic mb-6">Hãy cùng đọc to nhé!</p>
-          <div className="flex items-center gap-3">
-            <SampleAudioPlayer 
-              text={lesson.content} 
-              label="Nghe mẫu âm/vần" 
-              recordingId={`${lesson.id}-main`}
-              isTeacher={isTeacher}
-            />
-            {!isTeacher && (
-              <StudentAudioRecorder 
-                expectedText={lesson.content} 
-                recordingId={`student-${lesson.id}-main`}
-                onFeedback={(f) => completeLesson(lesson.id, f.accuracy, 'main')}
+        {lesson.book === 1 && (
+          <div className="flex flex-col items-center justify-center p-12 bg-orange-50/50 rounded-[2rem] border-2 border-dashed border-orange-200">
+            <div className="text-8xl md:text-9xl font-black text-orange-600 drop-shadow-sm">{lesson.content}</div>
+            <p className="mt-4 text-orange-900/50 font-medium italic mb-6">Hãy cùng đọc to nhé!</p>
+            <div className="flex items-center gap-3">
+              <SampleAudioPlayer 
+                text={lesson.content} 
+                label="Nghe mẫu âm/vần" 
+                recordingId={`${lesson.id}-main`}
+                isTeacher={isTeacher}
               />
-            )}
+              {!isTeacher && (
+                <StudentAudioRecorder 
+                  expectedText={lesson.content} 
+                  recordingId={`student-${lesson.id}-main`}
+                  onFeedback={(f) => completeLesson(lesson.id, f.accuracy, 'main')}
+                />
+              )}
+            </div>
           </div>
-        </div>
+        )}
         
         {lesson.examples.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
