@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, GraduationCap, Layout, ChevronRight, Star, Home, CheckCircle2, Trophy, Users, Baby, Lock, ArrowLeft, BarChart3, Settings, Plus, Trash2, Check, Sparkles, Bell, Calendar, X } from 'lucide-react';
+import { BookOpen, GraduationCap, Layout, ChevronRight, Star, Home, CheckCircle2, Trophy, Users, Baby, Lock, ArrowLeft, BarChart3, Settings, Plus, Trash2, Check, Sparkles, Bell, Calendar, X, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { lessons, Lesson } from './data/lessons';
 import { QuizComponent } from './components/QuizComponent';
@@ -650,6 +650,29 @@ function TeacherDashboard({ progress, users }: { progress: ProgressData, users: 
     ? Math.round((students.filter(s => s.completedCount > 0).length / students.length) * 100) 
     : 0;
 
+  const exportToExcel = () => {
+    const headers = ["Họ và tên", "Mã học sinh", "Số bài đã học", "Điểm trung bình", "Hoạt động cuối"];
+    const csvContent = [
+      headers.join(","),
+      ...students.map(s => [
+        `"${s.name}"`,
+        `"${s.id}"`,
+        s.completedCount,
+        s.avgScore,
+        `"${s.lastActive}"`
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "Danh_sach_lop_1A3.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (selectedStudent) {
     const studentProgress = selectedStudent.progress || {
       completedLessons: [],
@@ -778,7 +801,15 @@ function TeacherDashboard({ progress, users }: { progress: ProgressData, users: 
       <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold text-slate-900">Danh sách lớp 1A3</h2>
-          <div className="text-sm font-bold text-slate-400">Sĩ số: {students.length} học sinh</div>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={exportToExcel}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl font-bold hover:bg-emerald-200 transition-colors"
+            >
+              <Download size={18} /> Xuất Excel
+            </button>
+            <div className="text-sm font-bold text-slate-400">Sĩ số: {students.length} học sinh</div>
+          </div>
         </div>
         
         <div className="overflow-x-auto">
