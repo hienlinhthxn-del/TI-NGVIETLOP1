@@ -611,22 +611,34 @@ function WelcomeBox() {
 function TeacherDashboard({ progress, users }: { progress: ProgressData, users: UserProfile[] }) {
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
 
-  // Get real student data from localStorage
-  const students = users.map(user => {
+  const studentList = [
+    "Hà Tâm An", "Vũ Ngọc Khánh An", "Hoàng Diệu Anh", "Quàng Tuấn Anh", "Lê Bảo Châu",
+    "Trịnh Công Dũng", "Bùi Nhật Duy", "Nguyễn Nhật Duy", "Nguyễn Phạm Linh Đan", "Nguyễn Ngọc Bảo Hân",
+    "Mào Trung Hiếu", "Nguyễn Bá Gia Hưng", "Vừ Gia Hưng", "Vừ Thị Ngọc Linh", "Đỗ Phan Duy Long",
+    "Vừ Thành Long", "Vừ Bảo Ly", "Quàng Thị Quốc Mai", "Vừ Công Minh", "Phạm Bảo Ngọc",
+    "Lò Thảo Nguyên", "Trình Chân Nguyên", "Lò Đức Phong", "Thào Thị Thảo", "Tạ Anh Thư",
+    "Lò Minh Tiến", "Chang Trí Tuệ", "Cà Phương Uyên", "Bùi Uyển Vy"
+  ];
+
+  // Map student list to data, preferring real user data if name matches
+  const students = studentList.map((name, i) => {
+    const user = users.find(u => u.name === name);
+    const userId = user ? user.id : `student-${i + 1}`;
+
     let userProgress: ProgressData | null = null;
     try {
-      const saved = localStorage.getItem(`htl1-progress-${user.id}`);
+      const saved = localStorage.getItem(`htl1-progress-${userId}`);
       if (saved) userProgress = JSON.parse(saved);
     } catch (e) {}
 
     const completedCount = userProgress?.completedLessons?.length || 0;
     const scores = userProgress ? Object.values(userProgress.scores) : [];
-    const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+    const avgScore = scores.length > 0 ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) : 0;
     const lastActive = userProgress?.lastActivity ? new Date(userProgress.lastActivity).toLocaleDateString('vi-VN') : 'Chưa học';
 
     return {
-      id: user.id,
-      name: user.name,
+      id: userId,
+      name: name,
       completedCount,
       avgScore,
       lastActive,
@@ -765,7 +777,7 @@ function TeacherDashboard({ progress, users }: { progress: ProgressData, users: 
       
       <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold text-slate-900">Danh sách học sinh</h2>
+          <h2 className="text-2xl font-bold text-slate-900">Danh sách lớp 1A3</h2>
           <div className="text-sm font-bold text-slate-400">Sĩ số: {students.length} học sinh</div>
         </div>
         
