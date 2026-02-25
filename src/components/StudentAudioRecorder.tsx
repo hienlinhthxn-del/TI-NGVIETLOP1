@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Mic, Square, Play, RefreshCw, Sparkles, Loader2 } from 'lucide-react';
 import { analyzeReading } from '../services/geminiService';
-import { saveStudentAudio } from '../services/customAudioService';
+import { uploadAudioToCloud } from '../services/cloudAudioService'; // Đảm bảo import đúng
 import { motion, AnimatePresence } from 'motion/react';
 
 interface StudentAudioRecorderProps {
@@ -68,12 +68,15 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
         const textToAnalyze = Array.isArray(expectedText) ? expectedText.join(' ') : expectedText;
         const result = await analyzeReading(base64data, textToAnalyze);
         
-        if (recordingId) {
-          await saveStudentAudio(recordingId, audioBlob);
-        }
-
+        // Hiển thị kết quả ngay lập tức cho học sinh
         setFeedback(result);
         if (onFeedback) onFeedback(result, audioBlob);
+
+        if (recordingId) {
+          // Upload chạy ngầm, không chặn UI
+          uploadAudioToCloud(recordingId, audioBlob).catch(err => console.error("Upload background failed", err));
+        }
+
         setIsAnalyzing(false);
       };
     } catch (error) {

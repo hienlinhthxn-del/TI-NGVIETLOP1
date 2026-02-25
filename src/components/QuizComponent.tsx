@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, XCircle, Trophy, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 interface QuizProps {
   questions: { question: string; options: string[]; correctAnswer: number }[];
@@ -94,7 +100,3 @@ export const QuizComponent: React.FC<QuizProps> = ({ questions, onComplete }) =>
     </div>
   );
 };
-
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(' ');
-}

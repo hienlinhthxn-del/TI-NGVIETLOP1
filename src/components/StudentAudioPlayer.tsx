@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Play, Loader2 } from 'lucide-react';
-import { getStudentAudio } from '../services/customAudioService';
 
 interface StudentAudioPlayerProps {
   recordingId: string;
@@ -9,22 +8,36 @@ interface StudentAudioPlayerProps {
 export function StudentAudioPlayer({ recordingId }: StudentAudioPlayerProps) {
   const [isLoading, setIsLoading] = useState(false);
 
-  const handlePlay = async () => {
+  const handlePlay = () => {
     setIsLoading(true);
-    try {
-      const blob = await getStudentAudio(recordingId);
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audio.onended = () => URL.revokeObjectURL(url);
-        await audio.play();
-      } else {
-        alert("Không tìm thấy file ghi âm.");
-      }
-    } catch (err) {
-      console.error("Error playing student audio:", err);
-    }
-    setIsLoading(false);
+    // API route này sẽ chuyển hướng đến file audio thực tế trên Cloudinary
+    const audio = new Audio(`/api/audio/${recordingId}`);
+    
+    const cleanup = () => {
+      audio.oncanplaythrough = null;
+      audio.onended = null;
+      audio.onerror = null;
+    };
+
+    audio.oncanplaythrough = () => {
+      audio.play().catch(e => {
+        console.error("Audio play failed", e);
+        setIsLoading(false);
+        cleanup();
+      });
+    };
+
+    audio.onended = () => {
+      setIsLoading(false);
+      cleanup();
+    };
+
+    audio.onerror = () => {
+      console.error(`Error loading audio from /api/audio/${recordingId}`);
+      alert("Không thể tải bài đọc của học sinh.");
+      setIsLoading(false);
+      cleanup();
+    };
   };
 
   return (

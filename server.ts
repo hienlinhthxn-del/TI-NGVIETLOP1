@@ -59,6 +59,12 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  // Endpoint giữ chỗ cho Audio (để tránh lỗi 404 nếu frontend gọi nhầm)
+  app.post("/api/audio", (req, res) => {
+    // TODO: Lưu URL audio vào database nếu cần
+    res.json({ success: true, message: "Audio link received (mock)" });
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

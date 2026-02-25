@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, Reorder } from 'motion/react';
+import { motion, Reorder, AnimatePresence } from 'motion/react';
 import { Sparkles, CheckCircle2 } from 'lucide-react';
 
 interface WordBuilderProps {
@@ -62,5 +62,3 @@ export const WordBuilder: React.FC<WordBuilderProps> = ({ word, parts, onComplet
     </div>
   );
 };
-
-import { AnimatePresence } from 'motion/react';

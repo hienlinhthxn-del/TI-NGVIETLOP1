@@ -55,7 +55,10 @@ export const analyzeReading = async (audioBase64: string, expectedText: string) 
       },
     });
 
-    return JSON.parse(response.text || "{}");
+    // Làm sạch chuỗi JSON trước khi parse (loại bỏ ```json và ```)
+    const text = response.text() || "{}";
+    const cleanText = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(cleanText);
   } catch (error) {
     console.error("Error analyzing reading:", error);
     return { transcription: "", feedback: "Có lỗi khi chấm điểm. Vui lòng thử lại.", accuracy: 0 };

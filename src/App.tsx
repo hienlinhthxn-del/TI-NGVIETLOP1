@@ -8,7 +8,7 @@ import { SampleAudioPlayer } from './components/SampleAudioPlayer';
 import { StudentAudioRecorder } from './components/StudentAudioRecorder';
 import { StudentAudioPlayer } from './components/StudentAudioPlayer';
 import { MatchingExercise } from './components/MatchingExercise';
-import { useProgress, useAssignments, ProgressDashboard, type ProgressData, type Assignment, type UserProfile } from './services/progressService';
+import { useProgress, useAssignments, ProgressDashboard, type ProgressData, type Assignment, type UserProfile, type ClassGroup } from './services/progressService';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -24,7 +24,7 @@ export default function App() {
   const [teacherView, setTeacherView] = useState<'lessons' | 'dashboard'>('lessons');
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [aiFeedback, setAiFeedback] = useState<{ transcription: string; feedback: string; accuracy: number } | null>(null);
-  const { progress, completeLesson, setUsername, users, currentUserId, addUser, switchUser, deleteUser, addBulkUsers } = useProgress();
+  const { progress, completeLesson, setUsername, users, currentUserId, addUser, switchUser, deleteUser, addBulkUsers, classes, addClass } = useProgress();
   const [showSettings, setShowSettings] = useState(false);
   const [newUsername, setNewUsername] = useState(progress.username);
   const [isAddingUser, setIsAddingUser] = useState(false);
@@ -70,7 +70,9 @@ export default function App() {
               >
                 <Bell size={24} />
                 {assignments.length > 0 && (
-                  <span className="absolute top-1 right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold text-white">
+                    {assignments.length}
+                  </span>
                 )}
               </button>
               
@@ -324,7 +326,7 @@ export default function App() {
                   </AnimatePresence>
                 </div>
               </div>
-            ) : <TeacherDashboard progress={progress} users={users} addBulkUsers={addBulkUsers} />}
+            ) : <TeacherDashboard progress={progress} users={users} addBulkUsers={addBulkUsers} classes={classes} onAddClass={addClass} />}
           </>
         )}
         {role === 'parent' && <ParentDashboard progress={progress} />}
@@ -608,33 +610,18 @@ function WelcomeBox() {
   );
 }
 
-function TeacherDashboard({ progress, users, addBulkUsers }: { progress: ProgressData, users: UserProfile[], addBulkUsers: (names: string[]) => number }) {
+function TeacherDashboard({ progress, users, addBulkUsers, classes, onAddClass }: { progress: ProgressData, users: UserProfile[], addBulkUsers: (names: string[], classId: string) => number, classes: ClassGroup[], onAddClass: (name: string) => void }) {
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [selectedClass, setSelectedClass] = useState('1A3');
+  const [selectedClassId, setSelectedClassId] = useState(classes[0]?.id || '');
+  const [isAddingClass, setIsAddingClass] = useState(false);
+  const [newClassName, setNewClassName] = useState('');
 
-  const classLists = {
-    "1A3": [
-      "Hà Tâm An", "Vũ Ngọc Khánh An", "Hoàng Diệu Anh", "Quàng Tuấn Anh", "Lê Bảo Châu",
-      "Trịnh Công Dũng", "Bùi Nhật Duy", "Nguyễn Nhật Duy", "Nguyễn Phạm Linh Đan", "Nguyễn Ngọc Bảo Hân",
-      "Mào Trung Hiếu", "Nguyễn Bá Gia Hưng", "Vừ Gia Hưng", "Vừ Thị Ngọc Linh", "Đỗ Phan Duy Long",
-      "Vừ Thành Long", "Vừ Bảo Ly", "Quàng Thị Quốc Mai", "Vừ Công Minh", "Phạm Bảo Ngọc",
-      "Lò Thảo Nguyên", "Trình Chân Nguyên", "Lò Đức Phong", "Thào Thị Thảo", "Tạ Anh Thư",
-      "Lò Minh Tiến", "Chang Trí Tuệ", "Cà Phương Uyên", "Bùi Uyển Vy"
-    ],
-    "1A4": [
-      "Lê Minh Anh", "Phạm Gia Bảo", "Hoàng Ngọc Cát", "Đặng Tuấn Dũng", "Vũ Thị Lan",
-      "Nguyễn Tiến Minh", "Trần Bảo Ngọc", "Lý Gia Hân", "Phan Anh Quân", "Bùi Minh Khôi",
-      "Đỗ Phương Thảo", "Ngô Gia Huy", "Võ Hoàng Yến", "Huỳnh Khánh Linh", "Mai Tuấn Kiệt"
-    ]
-  };
+  // Filter students by selected class
+  const classStudents = users.filter(u => u.classId === selectedClassId || (!u.classId && selectedClassId === '1A3')); // Fallback for old data
 
-  const studentList = classLists[selectedClass] || [];
-
-  // Map student list to data, preferring real user data if name matches
-  const students = studentList.map((name, i) => {
-    const user = users.find(u => u.name === name);
-    const userId = user ? user.id : `student-${i + 1}`;
+  const students = classStudents.map(user => {
+    const userId = user.id;
 
     let userProgress: ProgressData | null = null;
     try {
@@ -649,7 +636,7 @@ function TeacherDashboard({ progress, users, addBulkUsers }: { progress: Progres
 
     return {
       id: userId,
-      name: name,
+      name: user.name,
       completedCount,
       avgScore,
       lastActive,
@@ -672,7 +659,7 @@ function TeacherDashboard({ progress, users, addBulkUsers }: { progress: Progres
       
       if (lines.length > 0) {
         if (confirm(`Tìm thấy ${lines.length} học sinh trong file. Bạn có muốn thêm các học sinh chưa có vào lớp không?`)) {
-          const addedCount = addBulkUsers(lines);
+          const addedCount = addBulkUsers(lines, selectedClassId);
           alert(`${addedCount} học sinh mới đã được thêm thành công! ${lines.length - addedCount} học sinh đã tồn tại.`);
         }
       } else {
@@ -684,6 +671,14 @@ function TeacherDashboard({ progress, users, addBulkUsers }: { progress: Progres
     // Reset file input to allow re-uploading the same file
     if (event.target) {
       event.target.value = '';
+    }
+  };
+
+  const handleAddClass = () => {
+    if (newClassName.trim()) {
+      onAddClass(newClassName.trim());
+      setNewClassName('');
+      setIsAddingClass(false);
     }
   };
 
@@ -704,7 +699,8 @@ function TeacherDashboard({ progress, users, addBulkUsers }: { progress: Progres
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `Danh_sach_lop_${selectedClass}.csv`);
+    const className = classes.find(c => c.id === selectedClassId)?.name || 'Danh_sach';
+    link.setAttribute("download", `Danh_sach_${className}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -840,16 +836,27 @@ function TeacherDashboard({ progress, users, addBulkUsers }: { progress: Progres
           <div className="flex items-center gap-4">
             <h2 className="text-2xl font-bold text-slate-900">Danh sách lớp</h2>
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-              {Object.keys(classLists).map(className => (
+              {classes.map(cls => (
                 <button 
-                  key={className}
-                  onClick={() => setSelectedClass(className)}
+                  key={cls.id}
+                  onClick={() => setSelectedClassId(cls.id)}
                   className={cn("px-3 py-1 rounded-lg text-sm font-bold transition-all", 
-                    selectedClass === className ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:bg-slate-200"
+                    selectedClassId === cls.id ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:bg-slate-200"
                   )}
-                >{className}</button>
+                >{cls.name}</button>
               ))}
+              <button onClick={() => setIsAddingClass(true)} className="px-3 py-1 rounded-lg text-sm font-bold text-emerald-600 hover:bg-emerald-100 transition-all"><Plus size={16} /></button>
             </div>
+            
+            {/* Add Class Modal/Input */}
+            {isAddingClass && (
+              <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50" onClick={() => setIsAddingClass(false)}>
+                <div className="bg-white p-4 rounded-2xl shadow-xl flex gap-2" onClick={e => e.stopPropagation()}>
+                  <input autoFocus value={newClassName} onChange={e => setNewClassName(e.target.value)} placeholder="Tên lớp mới..." className="border rounded-lg px-3 py-2" />
+                  <button onClick={handleAddClass} className="bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold">Thêm</button>
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-4">
             <button 

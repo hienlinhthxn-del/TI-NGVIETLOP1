@@ -37,6 +37,12 @@ export interface Assignment {
 export interface UserProfile {
   id: string;
   name: string;
+  classId?: string;
+}
+
+export interface ClassGroup {
+  id: string;
+  name: string;
 }
 
 const INITIAL_BADGES: Badge[] = [
@@ -47,6 +53,15 @@ const INITIAL_BADGES: Badge[] = [
 ];
 
 export const useProgress = () => {
+  // Quản lý danh sách lớp học
+  const [classes, setClasses] = useState<ClassGroup[]>(() => {
+    try {
+      const saved = localStorage.getItem('htl1-classes');
+      if (saved) return JSON.parse(saved);
+    } catch (e) { console.error(e); }
+    return [{ id: '1A3', name: 'Lớp 1A3' }];
+  });
+
   // Quản lý danh sách người dùng
   const [users, setUsers] = useState<UserProfile[]>(() => {
     try {
@@ -104,9 +119,34 @@ export const useProgress = () => {
     localStorage.setItem('htl1-users', JSON.stringify(users));
   }, [users]);
 
+  // Lưu danh sách lớp khi thay đổi
+  useEffect(() => {
+    localStorage.setItem('htl1-classes', JSON.stringify(classes));
+  }, [classes]);
+
   // Lưu ID user hiện tại
   useEffect(() => {
     localStorage.setItem('htl1-current-user-id', currentUserId);
+  }, [currentUserId]);
+
+  // TẢI DỮ LIỆU TỪ MONGODB KHI CHUYỂN USER
+  useEffect(() => {
+    const fetchCloudProgress = async () => {
+      if (currentUserId === 'default') return;
+      
+      try {
+        const res = await fetch(`/api/progress?userId=${currentUserId}`);
+        if (res.ok) {
+          const cloudData = await res.json();
+          // Hợp nhất dữ liệu từ cloud về, ưu tiên dữ liệu cloud
+          setProgress(prev => ({ ...prev, ...cloudData }));
+        }
+      } catch (e) {
+        console.error("Không thể tải dữ liệu từ cloud:", e);
+      }
+    };
+
+    fetchCloudProgress();
   }, [currentUserId]);
 
   // Lưu tiến độ của user hiện tại
@@ -116,7 +156,7 @@ export const useProgress = () => {
     // Sync with leaderboard
     const syncLeaderboard = async () => {
       try {
-        await fetch('/api/leaderboard/update', {
+        await fetch('/api/leaderboard', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -133,10 +173,32 @@ export const useProgress = () => {
     if (progress.points > 0) {
       syncLeaderboard();
     }
+
+    // ĐỒNG BỘ LÊN MONGODB
+    const syncToCloud = async () => {
+      try {
+        await fetch('/api/progress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: currentUserId, ...progress })
+        });
+      } catch (e) {
+        console.error("Lỗi đồng bộ đám mây:", e);
+      }
+    };
+
+    // Debounce: Đợi 2 giây sau khi thay đổi mới gửi lên server
+    const timeoutId = setTimeout(() => {
+      if (progress.points > 0) {
+        syncToCloud();
+      }
+    }, 2000);
+
+    return () => clearTimeout(timeoutId); // Hủy timeout nếu component unmount
   }, [progress, currentUserId]);
 
-  const addUser = (name: string) => {
-    const newUser = { id: Date.now().toString(), name };
+  const addUser = (name: string, classId?: string) => {
+    const newUser = { id: Date.now().toString(), name, classId };
     const newUsers = [...users, newUser];
     setUsers(newUsers);
     setCurrentUserId(newUser.id);
@@ -165,17 +227,23 @@ export const useProgress = () => {
     }
   };
 
-  const addBulkUsers = (names: string[]) => {
+  const addBulkUsers = (names: string[], classId: string) => {
     let newIdCounter = Date.now();
     const newUsersToAdd = names
       .map(name => name.trim().replace(/["\r]/g, ''))
       .filter(name => name && !users.some(u => u.name.toLowerCase() === name.toLowerCase()))
-      .map(name => ({ id: (newIdCounter++).toString(), name }));
+      .map(name => ({ id: (newIdCounter++).toString(), name, classId }));
 
     if (newUsersToAdd.length > 0) {
       setUsers(prevUsers => [...prevUsers, ...newUsersToAdd]);
     }
     return newUsersToAdd.length;
+  };
+
+  const addClass = (className: string) => {
+    const newClass = { id: Date.now().toString(), name: className };
+    setClasses([...classes, newClass]);
+    return newClass.id;
   };
 
   const completeLesson = (lessonId: string, score?: number, part?: string, partIndex?: number) => {
@@ -264,7 +332,7 @@ export const useProgress = () => {
     setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, name } : u));
   };
 
-  return { progress, completeLesson, setUsername, users, currentUserId, addUser, switchUser, deleteUser, addBulkUsers };
+  return { progress, completeLesson, setUsername, users, currentUserId, addUser, switchUser, deleteUser, addBulkUsers, classes, addClass };
 };
 
 export const useAssignments = () => {
@@ -311,13 +379,17 @@ export const ProgressDashboard: React.FC<{ progress: ProgressData }> = ({ progre
         const data = await res.json();
         setLeaderboard(data);
       } catch (e) {
-        console.error(e);
+        console.error("Không thể tải bảng xếp hạng:", e);
       } finally {
         setLoading(false);
       }
     };
-    fetchLeaderboard();
-  }, [progress.points]);
+
+    fetchLeaderboard(); // Tải lần đầu khi component được mount
+    const intervalId = setInterval(fetchLeaderboard, 60000); // Tự động làm mới sau mỗi 60 giây
+
+    return () => clearInterval(intervalId); // Dọn dẹp khi component unmount
+  }, [progress.points]); // Tải lại khi điểm thay đổi hoặc mỗi 60s
 
   return (
     <div className="space-y-8">
