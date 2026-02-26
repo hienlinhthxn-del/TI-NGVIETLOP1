@@ -15,12 +15,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!userId) return res.status(400).json({ error: 'userId is required' });
 
         try {
-            const data = await Progress.findOne({ userId });
+            const data = await Progress.findOne({ userId }).lean();
             if (data) return res.status(200).json(data);
-            return res.status(404).json({ error: 'Progress not found' });
-        } catch (error) {
-            console.error('Progress fetch error:', error);
-            return res.status(500).json({ error: 'Internal Server Error' });
+
+            // Nếu không có dữ liệu, trả về object rỗng thay vì lỗi 404 để tránh báo đỏ console
+            return res.status(200).json({ userId, points: 0, completedLessons: [] });
+        } catch (error: any) {
+            console.error('Progress fetch error:', error.message);
+            return res.status(500).json({ error: 'INTERNAL_SERVER_ERROR', details: error.message });
         }
     }
 
