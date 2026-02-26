@@ -3,52 +3,56 @@ import dbConnect from '../src/services/mongodb';
 import { User } from '../src/data/models';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    // 1. Test endpoint
+    if (req.query.test) return res.status(200).json({ status: 'Server is running', time: new Date().toISOString() });
+
     try {
         await dbConnect();
     } catch (dbError: any) {
         console.error('Database connection error:', dbError);
-        return res.status(500).json({ error: 'Lỗi kết nối cơ sở dữ liệu: ' + dbError.message });
+        return res.status(500).json({ error: 'DB_CONNECTION_ERROR', details: dbError.message });
     }
 
-    // Auto-seed admin and students if database is empty
-    try {
-        const userCount = await User.countDocuments();
-        if (userCount === 0) {
-            console.log('Database empty, seeding default data...');
+    // 2. Manual Seed trigger (Visit: /api/auth?seed=1)
+    if (req.query.seed) {
+        try {
+            const adminExists = await User.findOne({ username: 'admin' });
+            if (!adminExists) {
+                const admin = new User({
+                    username: 'admin',
+                    password: 'admin123',
+                    role: 'teacher',
+                    fullName: 'Giáo Viên Quản Trị',
+                    classId: '1A3'
+                });
+                await admin.save();
 
-            // Seed Admin
-            const admin = new User({
-                username: 'admin',
-                password: 'admin123',
-                role: 'teacher',
-                fullName: 'Giáo Viên Quản Trị',
-                classId: '1A3'
-            });
-            await admin.save();
+                // Seed default students
+                const defaultStudentNames = [
+                    'Hà Tâm An', 'Vũ Ngọc Khánh An', 'Hoàng Diệu Anh', 'Quàng Tuấn Anh', 'Lê Bảo Châu',
+                    'Trịnh Công Dũng', 'Bùi Nhật Duy', 'Nguyễn Nhật Duy', 'Nguyễn Phạm Linh Đan', 'Nguyễn Ngọc Bảo Hân',
+                    'Mào Trung Hiếu', 'Nguyễn Bá Gia Hưng', 'Vừ Gia Hưng', 'Vừ Thị Ngọc Linh', 'Đỗ Phan Duy Long',
+                    'Vừ Thành Long', 'Vừ Bảo Ly', 'Quàng Thị Quốc Mai', 'Vừ Công Minh', 'Phạm Bảo Ngọc',
+                    'Lò Thảo Nguyên', 'Trình Chân Nguyên', 'Lò Đức Phong', 'Thào Thị Thảo', 'Tạ Anh Thư',
+                    'Lò Minh Tiến', 'Chang Trí Tuệ', 'Cà Phương Uyên', 'Bùi Uyển Vy'
+                ];
 
-            // Seed 29 default students from class 1A3
-            const defaultStudentNames = [
-                'Hà Tâm An', 'Vũ Ngọc Khánh An', 'Hoàng Diệu Anh', 'Quàng Tuấn Anh', 'Lê Bảo Châu',
-                'Trịnh Công Dũng', 'Bùi Nhật Duy', 'Nguyễn Nhật Duy', 'Nguyễn Phạm Linh Đan', 'Nguyễn Ngọc Bảo Hân',
-                'Mào Trung Hiếu', 'Nguyễn Bá Gia Hưng', 'Vừ Gia Hưng', 'Vừ Thị Ngọc Linh', 'Đỗ Phan Duy Long',
-                'Vừ Thành Long', 'Vừ Bảo Ly', 'Quàng Thị Quốc Mai', 'Vừ Công Minh', 'Phạm Bảo Ngọc',
-                'Lò Thảo Nguyên', 'Trình Chân Nguyên', 'Lò Đức Phong', 'Thào Thị Thảo', 'Tạ Anh Thư',
-                'Lò Minh Tiến', 'Chang Trí Tuệ', 'Cà Phương Uyên', 'Bùi Uyển Vy'
-            ];
+                const studentsData = defaultStudentNames.map((name, index) => ({
+                    username: `hs${(index + 1).toString().padStart(2, '0')}`,
+                    password: '',
+                    role: 'student',
+                    fullName: name,
+                    classId: '1A3'
+                }));
 
-            const studentsData = defaultStudentNames.map((name, index) => ({
-                username: `hs${(index + 1).toString().padStart(2, '0')}`,
-                password: '',
-                role: 'student',
-                fullName: name,
-                classId: '1A3'
-            }));
-
-            await User.insertMany(studentsData);
-            console.log('Seeding completed: Admin + 29 Students');
+                await User.insertMany(studentsData);
+                return res.status(200).json({ message: 'Admin and Students created successfully' });
+            }
+            return res.status(200).json({ message: 'Data already exists' });
+        } catch (e: any) {
+            console.error('Seed error:', e);
+            return res.status(500).json({ error: 'SEED_ERROR', details: e.message });
         }
-    } catch (seedError) {
-        console.error('Seeding error:', seedError);
     }
 
     if (req.method === 'POST') {
@@ -68,10 +72,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 });
 
                 await newUser.save();
-                return res.status(201).json({ success: true, user: { username, fullName, role } });
-            } catch (error) {
+                return res.status(201).json({ success: true });
+            } catch (error: any) {
                 console.error('Register error:', error);
-                return res.status(500).json({ error: 'Lỗi đăng ký' });
+                return res.status(500).json({ error: 'REGISTER_ERROR', details: error.message });
             }
         }
 
@@ -90,9 +94,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         classId: user.classId
                     }
                 });
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Login error:', error);
-                return res.status(500).json({ error: 'Lỗi đăng nhập' });
+                return res.status(500).json({ error: 'LOGIN_ERROR', details: error.message });
             }
         }
     }
@@ -100,16 +104,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'GET') {
         const { classId } = req.query;
         try {
-            const students = await User.find({ classId, role: 'student' });
+            const students = await User.find({ classId, role: 'student' }).limit(50);
             return res.status(200).json(students.map((s: any) => ({
                 id: s._id,
                 fullName: s.fullName,
                 username: s.username,
                 role: s.role
             })));
-        } catch (error) {
+        } catch (error: any) {
             console.error('Fetch students error:', error);
-            return res.status(500).json({ error: 'Lỗi lấy danh sách học sinh' });
+            return res.status(500).json({ error: 'FETCH_STUDENTS_ERROR', details: error.message });
         }
     }
 
