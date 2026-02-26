@@ -372,6 +372,53 @@ export const useProgress = () => {
     setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, name } : u));
   };
 
+  const login = async (username: string, password?: string) => {
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'login', username, password })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const user = data.user;
+        // Update local users list if not exists
+        if (!users.find(u => u.id === user.id)) {
+          setUsers(prev => [...prev, { id: user.id, name: user.fullName || user.username, role: user.role, classId: user.classId }]);
+        }
+        setCurrentUserId(user.id);
+        const p = loadProgress(user.id, users);
+        setProgress({ ...p, username: user.fullName || user.username });
+        return { success: true, user };
+      }
+      return { success: false, error: data.error };
+    } catch (e) {
+      return { success: false, error: "Lỗi kết nối máy chủ" };
+    }
+  };
+
+  const register = async (userData: any) => {
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'register', ...userData })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        return { success: true };
+      }
+      return { success: false, error: data.error };
+    } catch (e) {
+      return { success: false, error: "Lỗi kết nối máy chủ" };
+    }
+  };
+
+  const logout = () => {
+    setCurrentUserId('default');
+    setProgress(loadProgress('default', users));
+  };
+
   const resetToDefault = () => {
     if (confirm("Bạn có chắc chắn muốn làm mới danh sách học sinh về mặc định không? Dữ liệu tiến độ cũ có thể bị ảnh hưởng.")) {
       setUsers(DEFAULT_STUDENTS);
@@ -381,7 +428,7 @@ export const useProgress = () => {
     }
   };
 
-  return { progress, completeLesson, setUsername, users, currentUserId, addUser, switchUser, deleteUser, addBulkUsers, classes, addClass, resetToDefault };
+  return { progress, completeLesson, setUsername, users, currentUserId, addUser, switchUser, deleteUser, addBulkUsers, classes, addClass, resetToDefault, login, register, logout };
 };
 
 export const useAssignments = () => {

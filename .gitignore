@@ -11,3 +11,5 @@ build
 
 # System files
 .DS_Store
+*.db
+*.db-journal

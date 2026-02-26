@@ -32,6 +32,17 @@ const AssignmentSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 
+// Schema cho Người dùng (Authentication)
+const UserSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true }, // Nên được hash
+    role: { type: String, enum: ['student', 'teacher', 'parent', 'admin'], default: 'student' },
+    fullName: String,
+    classId: String,
+    status: { type: String, default: 'active' }
+}, { timestamps: true });
+
+export const User = mongoose.models.User || mongoose.model('User', UserSchema);
 export const Progress = mongoose.models.Progress || mongoose.model('Progress', ProgressSchema);
 export const Class = mongoose.models.Class || mongoose.model('Class', ClassSchema);
 export const Assignment = mongoose.models.Assignment || mongoose.model('Assignment', AssignmentSchema);

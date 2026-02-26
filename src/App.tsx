@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpen, GraduationCap, Layout, ChevronRight, Star, Home, CheckCircle2, Trophy, Users, Baby, Lock, ArrowLeft, BarChart3, Settings, Plus, Trash2, Check, Sparkles, Bell, Calendar, X, Download, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { lessons, Lesson } from './data/lessons';
@@ -9,8 +9,10 @@ import { StudentAudioRecorder } from './components/StudentAudioRecorder';
 import { StudentAudioPlayer } from './components/StudentAudioPlayer';
 import { MatchingExercise } from './components/MatchingExercise';
 import { useProgress, useAssignments, ProgressDashboard, type ProgressData, type Assignment, type UserProfile, type ClassGroup } from './services/progressService';
+import { AuthScreen } from './components/AuthScreen';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { Loader2 } from 'lucide-react';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -24,7 +26,7 @@ export default function App() {
   const [teacherView, setTeacherView] = useState<'lessons' | 'dashboard'>('lessons');
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [aiFeedback, setAiFeedback] = useState<{ transcription: string; feedback: string; accuracy: number } | null>(null);
-  const { progress, completeLesson, setUsername, users, currentUserId, addUser, switchUser, deleteUser, addBulkUsers, classes, addClass, resetToDefault } = useProgress();
+  const { progress, completeLesson, setUsername, users, currentUserId, addUser, switchUser, deleteUser, addBulkUsers, classes, addClass, resetToDefault, login, logout } = useProgress();
   const [showSettings, setShowSettings] = useState(false);
   const [newUsername, setNewUsername] = useState(progress.username);
   const [isAddingUser, setIsAddingUser] = useState(false);
@@ -36,28 +38,29 @@ export default function App() {
     activeTab === 'tap1' ? l.book === 1 : l.book === 2
   );
 
+  const handleLogin = (selectedRole: Role, userData: any) => {
+    setRole(selectedRole);
+    // After login, we update the role in App state
+    // The progress is already updated inside useProgress.login
+  };
+
+  const handleLogout = () => {
+    setRole(null);
+    setSelectedLesson(null);
+    // useProgress.logout is handled if needed
+  };
+
   if (!role) {
-    return (
-      <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 font-sans">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12">
-          <h1 className="text-3xl font-black text-slate-900 mb-2">Chào mừng bạn!</h1>
-          <p className="text-slate-500 font-medium">Chọn vai trò để tiếp tục</p>
-        </motion.div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl w-full">
-          <RoleCard icon={<Baby size={48} />} title="Học Sinh" desc="Em muốn luyện đọc" color="blue" onClick={() => setRole('student')} />
-          <RoleCard icon={<GraduationCap size={48} />} title="Giáo Viên" desc="Soạn bài & Quản lý" color="emerald" onClick={() => setRole('teacher')} />
-          <RoleCard icon={<Users size={48} />} title="Phụ Huynh" desc="Theo dõi con học" color="orange" onClick={() => setRole('parent')} />
-        </div>
-      </div>
-    );
+    return <AuthScreen onLogin={handleLogin} loginService={login} />;
   }
 
   return (
     <div className="min-h-screen bg-[#FDFCF8] text-[#2D2D2D] font-sans">
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-orange-100 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
-          <button onClick={() => { setRole(null); setSelectedLesson(null); }} className="p-2 hover:bg-orange-50 rounded-xl text-orange-600 transition-colors">
+          <button onClick={handleLogout} className="p-2 hover:bg-orange-50 rounded-xl text-orange-600 transition-colors flex items-center gap-2 group">
             <ArrowLeft size={24} />
+            <span className="text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">Đổi vai trò / Đăng xuất</span>
           </button>
         </div>
         <div className="flex items-center gap-4">
@@ -340,7 +343,7 @@ export default function App() {
             ) : <TeacherDashboard progress={progress} users={users} addBulkUsers={addBulkUsers} classes={classes} onAddClass={addClass} onReset={resetToDefault} />}
           </>
         )}
-        {role === 'parent' && <ParentDashboard progress={progress} />}
+        {role === 'parent' && <ParentDashboard users={users} classes={classes} />}
       </main>
     </div>
   );
@@ -964,26 +967,89 @@ function TeacherDashboard({ progress, users, addBulkUsers, classes, onAddClass, 
   );
 }
 
-function ParentDashboard({ progress }: { progress: ProgressData }) {
+function ParentDashboard({ users, classes }: { users: UserProfile[], classes: ClassGroup[] }) {
   const { assignments } = useAssignments();
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+
+  // Lấy danh sách con (học sinh) của phụ huynh này. 
+  // Hiện tại ta giả định phụ huynh xem các học sinh trong cùng lớp (hoặc có logic liên kết riêng)
+  // Đơn giản nhất: Lấy học sinh đầu tiên trong danh sách nếu chưa chọn
+  useEffect(() => {
+    if (!selectedStudentId && users.length > 0) {
+      const firstStudent = users.find(u => u.role === 'student' || !u.role);
+      if (firstStudent) setSelectedStudentId(firstStudent.id);
+    }
+  }, [users, selectedStudentId]);
+
+  // Tải tiến độ của học sinh được chọn
+  const [studentProgress, setStudentProgress] = useState<ProgressData | null>(null);
+
+  useEffect(() => {
+    if (selectedStudentId) {
+      const saved = localStorage.getItem(`htl1-progress-${selectedStudentId}`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          // Đảm bảo đầy đủ các trường dữ liệu để không bị lỗi render
+          setStudentProgress({
+            completedLessons: [],
+            scores: {},
+            detailedScores: {},
+            username: 'Học sinh',
+            points: 0,
+            badges: [],
+            lastActivity: new Date().toISOString(),
+            ...parsed
+          });
+        } catch (e) {
+          console.error("Failed to parse student progress", e);
+        }
+      } else {
+        // Thử tải từ API nếu không có local
+        fetch(`/api/progress?userId=${selectedStudentId}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data) {
+              setStudentProgress({
+                completedLessons: [],
+                scores: {},
+                detailedScores: {},
+                username: 'Học sinh',
+                points: 0,
+                badges: [],
+                lastActivity: new Date().toISOString(),
+                ...data
+              });
+            }
+          })
+          .catch(() => setStudentProgress(null));
+      }
+    }
+  }, [selectedStudentId]);
+
+  if (!selectedStudentId || !studentProgress) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center flex-col gap-4">
+        <Loader2 className="animate-spin text-orange-500" size={48} />
+        <div className="text-slate-400 italic font-medium">Đang tải dữ liệu của con...</div>
+      </div>
+    );
+  }
 
   // Tính toán dữ liệu cho biểu đồ tuần
   const getWeeklyStats = () => {
     const stats = [];
     const now = new Date();
-    const dates = progress.completionDates || {};
+    const dates = studentProgress.completionDates || {};
 
-    // Lấy ngày thứ 2 của tuần hiện tại
-    const currentDay = now.getDay() || 7; // CN là 0 -> đổi thành 7
+    const currentDay = now.getDay() || 7;
     const monday = new Date(now);
     monday.setHours(0, 0, 0, 0);
     monday.setDate(now.getDate() - currentDay + 1);
 
-    // Tạo dữ liệu cho 4 tuần gần nhất (từ quá khứ đến hiện tại)
     for (let i = 3; i >= 0; i--) {
       const weekStart = new Date(monday);
       weekStart.setDate(monday.getDate() - (i * 7));
-
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
       weekEnd.setHours(23, 59, 59, 999);
@@ -1001,23 +1067,40 @@ function ParentDashboard({ progress }: { progress: ProgressData }) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-      <h2 className="text-3xl font-black text-orange-900">Tiến độ học tập của con</h2>
-      <ProgressDashboard progress={progress} />
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-black text-orange-900">Góc Phụ Huynh</h2>
+          <p className="text-slate-500 font-medium">Theo dõi hành trình của con: <span className="text-orange-600 font-bold">{studentProgress.username}</span></p>
+        </div>
+        {users.length > 2 && ( // Nếu có nhiều hơn 1 học sinh
+          <select
+            value={selectedStudentId}
+            onChange={(e) => setSelectedStudentId(e.target.value)}
+            className="px-4 py-2 bg-white border border-orange-200 rounded-xl font-bold text-orange-900 outline-none focus:ring-2 focus:ring-orange-500"
+          >
+            {users.filter(u => u.id !== 'parent' && u.id !== 'admin').map(u => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      <ProgressDashboard progress={studentProgress} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <WeeklyProgressChart data={getWeeklyStats()} />
 
         <div className="bg-white p-8 rounded-[2.5rem] border border-red-50 shadow-sm">
-          <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2"><Bell className="text-red-500" /> Bài tập giáo viên giao</h3>
+          <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2"><Bell className="text-red-500" /> Bài tập từ cô giáo</h3>
           <div className="space-y-3">
             {assignments.length === 0 ? (
-              <div className="text-center py-8 text-slate-400 italic">Không có bài tập nào được giao.</div>
+              <div className="text-center py-8 text-slate-400 italic">Hiện tại không có bài tập về nhà.</div>
             ) : (
               assignments.map(a => {
                 const lesson = lessons.find(l => l.id === a.lessonId);
-                const isCompleted = progress.completedLessons.includes(a.lessonId);
+                const isCompleted = studentProgress.completedLessons.includes(a.lessonId);
                 return (
-                  <div key={a.id} className={cn("p-4 rounded-2xl border flex items-start justify-between gap-4", isCompleted ? "bg-green-50 border-green-100" : "bg-white border-red-100")}>
+                  <div key={a.id} className={cn("p-4 rounded-2xl border flex items-start justify-between gap-4", isCompleted ? "bg-green-50 border-green-100" : "bg-white border-red-100 shadow-sm")}>
                     <div>
                       <div className="font-bold text-slate-900">{lesson?.title}</div>
                       <div className="text-xs text-slate-500 flex items-center gap-1"><Calendar size={12} /> {new Date(a.timestamp).toLocaleDateString('vi-VN')}</div>
@@ -1033,21 +1116,67 @@ function ParentDashboard({ progress }: { progress: ProgressData }) {
             )}
           </div>
         </div>
+      </div>
 
-        <div className="bg-white p-8 rounded-[2.5rem] border border-orange-50 shadow-sm">
-          <h3 className="text-xl font-bold text-orange-900 mb-6">Bài học đã hoàn thành</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {progress.completedLessons.map((id: string) => {
-              const lesson = lessons.find(l => l.id === id);
-              return (
-                <div key={id} className="flex items-center justify-between p-4 bg-orange-50 rounded-2xl border border-orange-100">
-                  <div className="font-bold text-orange-900">{lesson?.title || id}</div>
-                  <div className="text-sm font-black text-orange-600">{progress.scores[id] || 0}%</div>
-                </div>
-              );
-            })}
-            {progress.completedLessons.length === 0 && <div className="col-span-2 text-center py-12 text-gray-400 italic">Con chưa hoàn thành bài học nào.</div>}
-          </div>
+      <div className="bg-white p-8 rounded-[2.5rem] border border-orange-50 shadow-sm">
+        <h3 className="text-xl font-bold text-orange-900 mb-6 flex items-center gap-2">
+          <Sparkles className="text-orange-500" /> Chi tiết các bài nộp của con
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-orange-100">
+                <th className="pb-4 font-bold text-slate-400 uppercase text-xs tracking-widest">Bài học</th>
+                <th className="pb-4 font-bold text-slate-400 uppercase text-xs tracking-widest">Âm/Vần</th>
+                <th className="pb-4 font-bold text-slate-400 uppercase text-xs tracking-widest">Đoạn văn</th>
+                <th className="pb-4 font-bold text-slate-400 uppercase text-xs tracking-widest text-right">Điểm TB</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-orange-50">
+              {(studentProgress.completedLessons || []).map((id: string) => {
+                const lesson = lessons.find(l => l.id === id);
+                const scores = (studentProgress.detailedScores && studentProgress.detailedScores[id]) || {};
+                if (!lesson) return null;
+
+                return (
+                  <tr key={id} className="group hover:bg-orange-50/30 transition-colors">
+                    <td className="py-4">
+                      <div className="font-bold text-slate-700">{lesson.title}</div>
+                      <div className="text-[10px] text-slate-400 font-medium">
+                        {studentProgress.completionDates?.[id] ? new Date(studentProgress.completionDates[id]).toLocaleDateString('vi-VN') : ''}
+                      </div>
+                    </td>
+                    <td className="py-4">
+                      {scores.main !== undefined ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-emerald-600">{scores.main}%</span>
+                          <StudentAudioPlayer recordingId={`student-${selectedStudentId}-${id}-main`} />
+                        </div>
+                      ) : <span className="text-slate-300">-</span>}
+                    </td>
+                    <td className="py-4">
+                      {scores.passage !== undefined ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-purple-600">{scores.passage}%</span>
+                          <StudentAudioPlayer recordingId={`student-${selectedStudentId}-${id}-passage`} />
+                        </div>
+                      ) : <span className="text-slate-300">-</span>}
+                    </td>
+                    <td className="py-4 text-right">
+                      <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-black">
+                        {studentProgress.scores[id]}%
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+              {studentProgress.completedLessons.length === 0 && (
+                <tr className="w-full">
+                  <td colSpan={4} className="text-center py-12 text-gray-400 italic">Con chưa hoàn thành bài học nào.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </motion.div>

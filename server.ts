@@ -31,15 +31,52 @@ db.exec(`
   )
 `);
 
-// Add some mock data if empty
-const count = db.prepare("SELECT COUNT(*) as count FROM leaderboard").get() as { count: number };
-if (count.count === 0) {
-  const insert = db.prepare("INSERT INTO leaderboard (username, points, lessons_completed) VALUES (?, ?, ?)");
-  insert.run("Bé Na", 1200, 15);
-  insert.run("Bé Tí", 950, 12);
-  insert.run("Bé Gấu", 800, 10);
-  insert.run("Bé Thỏ", 600, 8);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    username TEXT UNIQUE,
+    password TEXT,
+    full_name TEXT,
+    role TEXT,
+    class_id TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
+if (userCount.count === 0) {
+  const insertUser = db.prepare("INSERT INTO users (id, username, password, full_name, role, class_id) VALUES (?, ?, ?, ?, ?, ?)");
+  insertUser.run("admin", "admin", "admin123", "Giáo Viên Quản Trị", "teacher", "1A3");
+
+  // Nạp sẵn danh sách học sinh mẫu vào DB
+  const sampleStudents = [
+    { id: "hs01", name: "Hà Tâm An" },
+    { id: "hs02", name: "Vũ Ngọc Khánh An" },
+    { id: "hs03", name: "Hoàng Diệu Anh" },
+    { id: "hs04", name: "Quàng Tuấn Anh" },
+    { id: "hs05", name: "Lê Bảo Châu" }
+  ];
+
+  sampleStudents.forEach(s => {
+    insertUser.run(s.id, s.id, "", s.name, "student", "1A3");
+  });
+
+  // Nạp sẵn 1 tài khoản phụ huynh mẫu
+  insertUser.run("phuhuynh01", "parent", "123456", "Phụ Huynh Bé An", "parent", "1A3");
+
+  console.log("Seeded default users (Teacher: admin/admin123, Students: hs01-hs05)");
 }
+
+// Đảm bảo tài khoản Phụ huynh mẫu luôn tồn tại
+const parentExists = db.prepare("SELECT id FROM users WHERE username = 'parent'").get();
+if (!parentExists) {
+  const insertUser = db.prepare("INSERT INTO users (id, username, password, full_name, role, class_id) VALUES (?, ?, ?, ?, ?, ?)");
+  insertUser.run("phuhuynh01", "parent", "123456", "Phụ Huynh Bé An", "parent", "1A3");
+  console.log("Created sample parent account: parent / 123456");
+}
+
+// Cập nhật tất cả học sinh đã có để mật khẩu là trống (để HS đăng nhập nhanh bằng cách chọn tên)
+db.prepare("UPDATE users SET password = '' WHERE role = 'student' AND password = '123'").run();
 
 async function startServer() {
   const app = express();
@@ -97,6 +134,48 @@ async function startServer() {
 
     upsert.run(userId, JSON.stringify(progressData));
     res.json({ success: true });
+  });
+
+  // API Authentication
+  app.post("/api/auth", (req, res) => {
+    const { action, username, password, fullName, role, classId } = req.body;
+
+    if (action === "register") {
+      try {
+        const id = Date.now().toString();
+        const insert = db.prepare("INSERT INTO users (id, username, password, full_name, role, class_id) VALUES (?, ?, ?, ?, ?, ?)");
+        insert.run(id, username, password, fullName, role || "student", classId || "1A3");
+        res.status(201).json({ success: true, user: { id, username, fullName, role: role || "student" } });
+      } catch (e: any) {
+        if (e.message.includes("UNIQUE constraint failed")) {
+          res.status(400).json({ error: "Tài khoản đã tồn tại" });
+        } else {
+          res.status(500).json({ error: "Lỗi đăng ký: " + e.message });
+        }
+      }
+    } else if (action === "login") {
+      const user = db.prepare("SELECT * FROM users WHERE username = ? AND password = ?").get(username, password) as any;
+      if (user) {
+        res.json({
+          success: true,
+          user: {
+            id: user.id,
+            username: user.username,
+            fullName: user.full_name,
+            role: user.role,
+            classId: user.classId
+          }
+        });
+      } else {
+        res.status(401).json({ error: "Tên đăng nhập hoặc mật khẩu không đúng" });
+      }
+    }
+  });
+
+  app.get("/api/auth/students", (req, res) => {
+    const { classId } = req.query;
+    const students = db.prepare("SELECT id, full_name as fullName, username, role FROM users WHERE class_id = ? AND role = 'student'").all(classId || "1A3");
+    res.json(students);
   });
 
   // API nghe lại bài đọc học sinh
