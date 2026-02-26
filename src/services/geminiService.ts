@@ -18,13 +18,13 @@ export const getGeminiModel = (modelName: string = "gemini-1.5-flash") => {
   return genAI;
 };
 
-export const analyzeReading = async (audioBase64: string, expectedText: string) => {
+export const analyzeReading = async (audioBase64: string, expectedText: string, mimeType: string = "audio/webm") => {
   const genAI = getGeminiModel("gemini-1.5-flash");
 
   if (!genAI) {
     return {
       transcription: "",
-      feedback: "Chưa cấu hình API Key. Vui lòng kiểm tra cài đặt.",
+      feedback: "Cô giáo chưa chuẩn bị xong khóa học (Thiếu API Key). Vui lòng báo giáo viên kiểm tra nhé!",
       accuracy: 0
     };
   }
@@ -34,16 +34,21 @@ export const analyzeReading = async (audioBase64: string, expectedText: string) 
     const result = await model.generateContent([
       {
         inlineData: {
-          mimeType: "audio/webm",
+          mimeType: mimeType,
           data: audioBase64,
         },
       },
       {
-        text: `Đây là bản ghi âm của một học sinh lớp 1 đang tập đọc. Văn bản mong đợi là: "${expectedText}". 
-      Hãy phiên âm những gì học sinh đã đọc và so sánh với văn bản mong đợi. 
-      Sau đó, đưa ra nhận xét khích lệ bằng tiếng Việt, chỉ ra những từ đọc đúng và những từ cần luyện tập thêm.
-      Trả về kết quả dưới dạng JSON với cấu trúc: { "transcription": string, "feedback": string, "accuracy": number (0-100) }. 
-      Lưu ý: Chỉ trả về chuỗi JSON, không kèm markdown.`,
+        text: `Bạn là một giáo viên lớp 1 đang chấm điểm tập đọc cho học sinh 6 tuổi. 
+      Văn bản mong đợi: "${expectedText}".
+      
+      Nhiệm vụ:
+      1. Phiên âm đoạn âm thanh (transcription).
+      2. So sánh với văn bản mong đợi. Nếu học sinh đọc được đại ý hoặc gần đúng các âm cơ bản, hãy chấm điểm cao (trên 70). Chỉ chấm điểm thấp nếu hoàn toàn không có tiếng người hoặc đọc sai toàn bộ.
+      3. Đưa ra nhận xét (feedback) cực kỳ ngọt ngào, khen ngợi sự cố gắng của bé, dùng các từ như "Con giỏi quá", "Cố gắng lên nhé", "Cô khen con".
+      4. Trả về JSON: { "transcription": string, "feedback": string, "accuracy": number }.
+      
+      Lưu ý: Chỉ trả về JSON nguyên bản, không dùng dấu nháy ngược code block.`,
       },
     ]);
 
@@ -53,7 +58,7 @@ export const analyzeReading = async (audioBase64: string, expectedText: string) 
     return JSON.parse(cleanText);
   } catch (error) {
     console.error("Error analyzing reading:", error);
-    return { transcription: "", feedback: "Có lỗi khi chấm điểm. Vui lòng thử lại.", accuracy: 0 };
+    return { transcription: "", feedback: "Cô chưa nghe rõ, con bấm nút ghi âm và đọc lại cho cô nghe nhé!", accuracy: 0 };
   }
 };
 

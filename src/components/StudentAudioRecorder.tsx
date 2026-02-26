@@ -22,7 +22,12 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+
+      // Xác định mimeType hỗ trợ
+      const mimeTypes = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/aac'];
+      const supportedType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type)) || '';
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: supportedType });
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
@@ -33,7 +38,7 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(chunksRef.current, { type: supportedType || 'audio/webm' });
         setAudioBlob(blob);
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
@@ -44,7 +49,7 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
       setFeedback(null);
     } catch (err) {
       console.error("Error accessing microphone:", err);
-      alert("Không thể truy cập micro. Vui lòng kiểm tra quyền.");
+      alert("Không thể truy cập micro. Vui lòng kiểm tra quyền truy cập trên trình duyệt của con nhé!");
     }
   };
 
@@ -58,7 +63,7 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
 
   const handleAnalyze = async () => {
     if (!audioBlob) return;
-    
+
     setIsAnalyzing(true);
     try {
       const reader = new FileReader();
@@ -66,14 +71,16 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
       reader.onloadend = async () => {
         const base64data = (reader.result as string).split(',')[1];
         const textToAnalyze = Array.isArray(expectedText) ? expectedText.join(' ') : expectedText;
-        const result = await analyzeReading(base64data, textToAnalyze);
-        
+        const result = await analyzeReading(base64data, textToAnalyze, audioBlob.type);
+
         // Hiển thị kết quả ngay lập tức cho học sinh
         setFeedback(result);
         if (onFeedback) onFeedback(result, audioBlob);
 
         if (recordingId) {
           // Upload chạy ngầm, không chặn UI
+          // Chuyển đổi blob sang định dạng chuẩn trước khi upload nếu cần? 
+          // Cloudinary có thể tự xử lý, nhưng ta gửi kèm mimeType đúng
           uploadAudioToCloud(recordingId, audioBlob).catch(err => console.error("Upload background failed", err));
         }
 
@@ -81,6 +88,7 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
       };
     } catch (error) {
       console.error("Analysis failed:", error);
+      setFeedback({ accuracy: 0, feedback: "Máy chủ AI đang bận. Con thử lại sau nhé!" });
       setIsAnalyzing(false);
     }
   };
