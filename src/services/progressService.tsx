@@ -165,7 +165,7 @@ export const useProgress = () => {
   useEffect(() => {
     const fetchCloudProgress = async () => {
       if (currentUserId === 'default') return;
-      
+
       try {
         const res = await fetch(`/api/progress?userId=${currentUserId}`);
         if (res.ok) {
@@ -184,7 +184,7 @@ export const useProgress = () => {
   // Lưu tiến độ của user hiện tại
   useEffect(() => {
     localStorage.setItem(`htl1-progress-${currentUserId}`, JSON.stringify(progress));
-    
+
     // Sync with leaderboard
     const syncLeaderboard = async () => {
       try {
@@ -201,7 +201,7 @@ export const useProgress = () => {
         // console.error("Failed to sync leaderboard", e);
       }
     };
-    
+
     if (progress.points > 0) {
       syncLeaderboard();
     }
@@ -251,7 +251,7 @@ export const useProgress = () => {
     const newUsers = users.filter(u => u.id !== userId);
     setUsers(newUsers);
     localStorage.removeItem(`htl1-progress-${userId}`);
-    
+
     if (currentUserId === userId) {
       const nextUser = newUsers[0];
       setCurrentUserId(nextUser.id);
@@ -281,14 +281,14 @@ export const useProgress = () => {
   const completeLesson = (lessonId: string, score?: number, part?: string, partIndex?: number) => {
     setProgress(prev => {
       const isNewLesson = !prev.completedLessons.includes(lessonId);
-      const newCompleted = isNewLesson 
+      const newCompleted = isNewLesson
         ? [...prev.completedLessons, lessonId]
         : prev.completedLessons;
-      
+
       const newScores = { ...prev.scores };
       const newDetailed = { ...prev.detailedScores };
       const newCompletionDates = { ...(prev.completionDates || {}) };
-      
+
       if (!newDetailed[lessonId]) {
         newDetailed[lessonId] = {};
       }
@@ -316,12 +316,12 @@ export const useProgress = () => {
         if (newDetailed[lessonId].examples) {
           Object.values(newDetailed[lessonId].examples).forEach(s => parts.push(s));
         }
-        
+
         if (parts.length > 0) {
           const oldScore = newScores[lessonId] || 0;
           const newScore = Math.round(parts.reduce((a, b) => a + b, 0) / parts.length);
           newScores[lessonId] = newScore;
-          
+
           // Bonus points for score improvement
           if (newScore > oldScore) {
             pointsEarned += (newScore - oldScore);
@@ -332,13 +332,13 @@ export const useProgress = () => {
       // Update badges
       const newBadges = prev.badges.map(badge => {
         if (badge.unlocked) return badge;
-        
+
         let shouldUnlock = false;
         if (badge.id === 'first_step' && newCompleted.length >= 1) shouldUnlock = true;
         if (badge.id === 'star_student' && Object.values(newScores).some(s => s >= 100)) shouldUnlock = true;
         if (badge.id === 'dedicated' && newCompleted.length >= 5) shouldUnlock = true;
         if (badge.id === 'master' && newCompleted.length >= 10) shouldUnlock = true;
-        
+
         if (shouldUnlock) {
           pointsEarned += 50; // Bonus for unlocking badge
           return { ...badge, unlocked: true };
@@ -383,7 +383,7 @@ export const useAssignments = () => {
       message,
       dueDate
     };
-    
+
     // Kiểm tra xem bài này đã được giao chưa để tránh trùng lặp
     if (!assignments.some(a => a.lessonId === lessonId)) {
       const newAssignments = [newAssignment, ...assignments];
@@ -396,7 +396,7 @@ export const useAssignments = () => {
   };
 
   // Hàm xóa bài tập (dành cho giáo viên nếu cần - optional)
-  
+
   return { assignments, assignLesson };
 };
 
@@ -454,7 +454,7 @@ export const ProgressDashboard: React.FC<{ progress: ProgressData }> = ({ progre
           </div>
           <div>
             <div className="text-2xl font-black text-green-900">
-              {progress.completedLessons.length > 0 
+              {progress.completedLessons.length > 0
                 ? Math.round(Object.values(progress.scores).reduce((a, b) => a + b, 0) / progress.completedLessons.length)
                 : 0}%
             </div>

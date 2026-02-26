@@ -19,43 +19,35 @@ export const getGeminiModel = (modelName: string = "gemini-1.5-flash") => {
 };
 
 export const analyzeReading = async (audioBase64: string, expectedText: string) => {
-  const ai = getGeminiModel("gemini-1.5-flash");
-  
-  if (!ai) {
-    return { 
-      transcription: "", 
-      feedback: "Chưa cấu hình API Key. Vui lòng kiểm tra cài đặt.", 
-      accuracy: 0 
+  const genAI = getGeminiModel("gemini-1.5-flash");
+
+  if (!genAI) {
+    return {
+      transcription: "",
+      feedback: "Chưa cấu hình API Key. Vui lòng kiểm tra cài đặt.",
+      accuracy: 0
     };
   }
-  
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: [
-        {
-          parts: [
-            {
-              inlineData: {
-                mimeType: "audio/webm",
-                data: audioBase64,
-              },
-            },
-            {
-              text: `Đây là bản ghi âm của một học sinh lớp 1 đang tập đọc. Văn bản mong đợi là: "${expectedText}". 
-            Hãy phiên âm những gì học sinh đã đọc và so sánh với văn bản mong đợi. 
-            Sau đó, đưa ra nhận xét khích lệ bằng tiếng Việt, chỉ ra những từ đọc đúng và những từ cần luyện tập thêm.
-            Trả về kết quả dưới dạng JSON với cấu trúc: { "transcription": string, "feedback": string, "accuracy": number (0-100) }`,
-            },
-          ],
-        },
-      ],
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
 
-    // Làm sạch chuỗi JSON trước khi parse (loại bỏ ```json và ```)
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          mimeType: "audio/webm",
+          data: audioBase64,
+        },
+      },
+      {
+        text: `Đây là bản ghi âm của một học sinh lớp 1 đang tập đọc. Văn bản mong đợi là: "${expectedText}". 
+      Hãy phiên âm những gì học sinh đã đọc và so sánh với văn bản mong đợi. 
+      Sau đó, đưa ra nhận xét khích lệ bằng tiếng Việt, chỉ ra những từ đọc đúng và những từ cần luyện tập thêm.
+      Trả về kết quả dưới dạng JSON với cấu trúc: { "transcription": string, "feedback": string, "accuracy": number (0-100) }. 
+      Lưu ý: Chỉ trả về chuỗi JSON, không kèm markdown.`,
+      },
+    ]);
+
+    const response = await result.response;
     const text = response.text() || "{}";
     const cleanText = text.replace(/```json|```/g, '').trim();
     return JSON.parse(cleanText);
@@ -66,18 +58,17 @@ export const analyzeReading = async (audioBase64: string, expectedText: string) 
 };
 
 export const getQuickHelp = async (question: string) => {
-  const ai = getGeminiModel("gemini-1.5-flash");
-  if (!ai) return "Chưa cấu hình API Key.";
+  const genAI = getGeminiModel("gemini-1.5-flash");
+  if (!genAI) return "Chưa cấu hình API Key.";
 
   try {
-    const response = await ai.models.generateContent({
+    const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash",
-      contents: question,
-      config: {
-        systemInstruction: "Bạn là một giáo viên tiểu học vui vẻ, chuyên dạy lớp 1. Hãy trả lời các câu hỏi của học sinh hoặc phụ huynh một cách ngắn gọn, dễ hiểu và tràn đầy năng lượng.",
-      }
+      systemInstruction: "Bạn là một giáo viên tiểu học vui vẻ, chuyên dạy lớp 1. Hãy trả lời các câu hỏi của học sinh hoặc phụ huynh một cách ngắn gọn, dễ hiểu và tràn đầy năng lượng.",
     });
-    return response.text;
+    const result = await model.generateContent(question);
+    const response = await result.response;
+    return response.text();
   } catch (error) {
     console.error("Error getting quick help:", error);
     return "Xin lỗi, cô giáo đang bận một chút. Con thử lại sau nhé!";
