@@ -3,7 +3,12 @@ import dbConnect from '../src/services/mongodb';
 import { Progress } from '../src/data/models';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    await dbConnect();
+    try {
+        await dbConnect();
+    } catch (dbError: any) {
+        console.error('Progress DB connection error:', dbError);
+        return res.status(500).json({ error: 'Lỗi kết nối cơ sở dữ liệu: ' + dbError.message });
+    }
 
     if (req.method === 'GET') {
         const { userId } = req.query;
@@ -14,6 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (data) return res.status(200).json(data);
             return res.status(404).json({ error: 'Progress not found' });
         } catch (error) {
+            console.error('Progress fetch error:', error);
             return res.status(500).json({ error: 'Internal Server Error' });
         }
     }
@@ -30,6 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             );
             return res.status(200).json(updated);
         } catch (error) {
+            console.error('Progress update error:', error);
             return res.status(500).json({ error: 'Internal Server Error' });
         }
     }
