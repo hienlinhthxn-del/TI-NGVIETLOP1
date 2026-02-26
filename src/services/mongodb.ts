@@ -25,10 +25,11 @@ async function dbConnect() {
     if (!cached.promise) {
         const opts = {
             bufferCommands: false,
+            dbName: 'tieng-viet-1'
         };
 
         cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
-            console.log('MongoDB Connected');
+            console.log('MongoDB Connected to tieng-viet-1');
             return mongoose;
         });
     }
