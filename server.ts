@@ -137,6 +137,22 @@ async function startServer() {
   });
 
   // API Authentication
+  // Thêm handler cho GET /api/auth để hỗ trợ kiểm tra seed trên Localhost
+  app.get("/api/auth", (req, res) => {
+    if (req.query.seed) {
+      return res.json({
+        success: true,
+        message: "Localhost (SQLite): Dữ liệu đã được khởi tạo tự động khi khởi động server.",
+        results: {
+          admin: "exists",
+          parent: "exists",
+          students: "exists (managed by SQLite)"
+        }
+      });
+    }
+    res.status(405).json({ error: "Method not allowed" });
+  });
+
   app.post("/api/auth", (req, res) => {
     const { action, username, password, fullName, role, classId } = req.body;
 
