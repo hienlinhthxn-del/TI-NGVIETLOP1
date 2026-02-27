@@ -190,8 +190,13 @@ async function startServer() {
 
   app.get("/api/auth/students", (req, res) => {
     const { classId } = req.query;
-    const students = db.prepare("SELECT id, full_name as fullName, username, role FROM users WHERE class_id = ? AND role = 'student'").all(classId || "1A3");
-    res.json(students);
+    try {
+      const students = db.prepare("SELECT id, full_name as fullName, username, role FROM users WHERE class_id = ? AND role = 'student'").all(classId || "1A3");
+      res.json(students);
+    } catch (error: any) {
+      console.error("Lỗi lấy danh sách học sinh (Local):", error.message);
+      res.status(500).json({ error: "Lỗi cơ sở dữ liệu local. Hãy thử xóa file learning.db để tạo lại." });
+    }
   });
 
   // API nghe lại bài đọc học sinh
