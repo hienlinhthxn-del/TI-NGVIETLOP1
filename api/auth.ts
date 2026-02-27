@@ -8,16 +8,6 @@ import { User } from '../src/data/models';
  * - GET /api/auth?seed=1 (Khởi tạo dữ liệu mẫu)
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    // Thêm headers CORS để cho phép truy cập từ mọi nguồn (Frontend)
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
-
-    if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
-    }
-
     // 0. Thêm test param để kiểm tra server có phản hồi nhanh không
     if (req.query.test) {
         return res.status(200).json({
@@ -144,16 +134,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             try {
                 if (!username) return res.status(400).json({ error: 'Vui lòng nhập tên đăng nhập' });
 
-                // Tìm user theo username trước
-                const user = await User.findOne({ username });
+                // Lưu ý: HS đăng nhập không có mật khẩu (password='')
+                const user = await User.findOne({
+                    username: username,
+                    password: password || ''
+                });
 
                 if (!user) {
-                    return res.status(401).json({ error: 'Tài khoản không tồn tại' });
-                }
-
-                // Kiểm tra mật khẩu (So sánh chuỗi, xử lý trường hợp null/undefined thành chuỗi rỗng)
-                if ((user.password || '') !== (password || '')) {
-                    return res.status(401).json({ error: 'Mật khẩu không chính xác' });
+                    return res.status(401).json({ error: 'Tài khoản hoặc mật khẩu không chính xác' });
                 }
 
                 return res.status(200).json({
