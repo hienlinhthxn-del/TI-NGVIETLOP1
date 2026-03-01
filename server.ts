@@ -170,6 +170,7 @@ async function startServer() {
         }
       }
     } else if (action === "login") {
+      console.log(`Login attempt: ${username} / ${password}`);
       const user = db.prepare("SELECT * FROM users WHERE username = ? AND password = ?").get(username, password) as any;
       if (user) {
         res.json({
@@ -179,7 +180,7 @@ async function startServer() {
             username: user.username,
             fullName: user.full_name,
             role: user.role,
-            classId: user.classId
+            classId: user.class_id // Sửa lỗi: Map đúng cột class_id từ DB
           }
         });
       } else {

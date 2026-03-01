@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion'; // Sửa import để tương thích tốt hơn
 import { GraduationCap, Baby, Users, ArrowLeft, Lock, User, Check, AlertCircle } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -35,6 +35,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, loginService })
             setStudents(data);
         } catch (e) {
             console.error("Failed to fetch students");
+            setError("Không thể tải danh sách học sinh. Hãy kiểm tra server.");
         }
     };
 
@@ -44,7 +45,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, loginService })
         setLoading(true);
 
         const targetUsername = selectedUser || username;
-        const res = await loginService(targetUsername, password);
+        // QUAN TRỌNG: Nếu là chọn học sinh (selectedUser tồn tại), luôn gửi password là chuỗi rỗng.
+        // Nếu không, dùng password từ state (dành cho GV/PH).
+        const targetPassword = selectedUser ? "" : password;
+
+        const res = await loginService(targetUsername, targetPassword);
 
         if (res.success) {
             onLogin(role || 'student', res.user);
