@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, GraduationCap, Layout, ChevronRight, Star, Home, CheckCircle2, Trophy, Users, Baby, Lock, ArrowLeft, BarChart3, Settings, Plus, Trash2, Check, Sparkles, Bell, Calendar, X, Download, Upload } from 'lucide-react';
+import { BookOpen, GraduationCap, Layout, ChevronRight, Star, Home, CheckCircle2, Trophy, Users, Baby, Lock, ArrowLeft, BarChart3, Settings, Plus, Trash2, Check, Sparkles, Bell, Calendar, X, Download, Upload, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { lessons, Lesson } from './data/lessons';
+import { lessons as staticLessons, Lesson } from './data/lessons';
 import { QuizComponent } from './components/QuizComponent';
 import { WordBuilder } from './components/WordBuilder';
 import { SampleAudioPlayer } from './components/SampleAudioPlayer';
@@ -25,6 +25,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'tap1' | 'tap2'>('tap1');
   const [teacherView, setTeacherView] = useState<'lessons' | 'dashboard'>('lessons');
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [lessons, setLessons] = useState<Lesson[]>(staticLessons);
+  const [isLoadingLessons, setIsLoadingLessons] = useState(true);
   const [aiFeedback, setAiFeedback] = useState<{ transcription: string; feedback: string; accuracy: number } | null>(null);
   const { progress, completeLesson, setUsername, users, currentUserId, addUser, switchUser, deleteUser, addBulkUsers, classes, addClass, resetToDefault, login, logout } = useProgress();
   const [showSettings, setShowSettings] = useState(false);
@@ -33,6 +36,44 @@ export default function App() {
   const [newProfileName, setNewProfileName] = useState('');
   const { assignments, assignLesson } = useAssignments();
   const [showNotifications, setShowNotifications] = useState(false);
+
+  useEffect(() => {
+    fetchLessons();
+  }, []);
+
+  const fetchLessons = async () => {
+    try {
+      setIsLoadingLessons(true);
+      const res = await fetch('/api/lessons');
+      if (res.ok) {
+        const data = await res.json();
+        setLessons(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch lessons", error);
+    } finally {
+      setIsLoadingLessons(false);
+    }
+  };
+
+  const handleUpdateLesson = async (id: string, updates: Partial<Lesson>) => {
+    try {
+      const res = await fetch('/api/lessons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, updates })
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setLessons(prev => prev.map(l => l.id === id ? updated : l));
+        setSelectedLesson(updated);
+        setIsEditing(false);
+        alert("Cập nhật bài học thành công!");
+      }
+    } catch (error) {
+      alert("Lỗi khi cập nhật bài học");
+    }
+  };
 
   const filteredLessons = lessons.filter(l =>
     activeTab === 'tap1' ? l.book === 1 : l.book === 2
@@ -336,7 +377,15 @@ export default function App() {
                 </div>
                 <div className="lg:col-span-8">
                   <AnimatePresence mode="wait">
-                    {selectedLesson ? <LessonContent lesson={selectedLesson} progress={progress} onFeedback={(f) => { setAiFeedback(f); completeLesson(selectedLesson.id, f.accuracy); }} aiFeedback={aiFeedback} completeLesson={completeLesson} role={role} assignLesson={assignLesson} assignments={assignments} currentUserId={currentUserId} /> : <WelcomeBox />}
+                    {selectedLesson ? (
+                      isEditing ? (
+                        <LessonEditor lesson={selectedLesson} onSave={handleUpdateLesson} onCancel={() => setIsEditing(false)} />
+                      ) : (
+                        <LessonContent lesson={selectedLesson} progress={progress} onFeedback={(f) => { setAiFeedback(f); completeLesson(selectedLesson.id, f.accuracy); }} aiFeedback={aiFeedback} completeLesson={completeLesson} role={role} assignLesson={assignLesson} assignments={assignments} currentUserId={currentUserId} onEdit={() => setIsEditing(true)} />
+                      )
+                    ) : (
+                      <WelcomeBox />
+                    )}
                   </AnimatePresence>
                 </div>
               </div>
@@ -398,7 +447,7 @@ interface LessonContentProps {
   currentUserId: string;
 }
 
-function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesson, role, assignLesson, assignments, currentUserId }: LessonContentProps) {
+function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesson, role, assignLesson, assignments, currentUserId, onEdit }: LessonContentProps & { onEdit?: () => void }) {
   const isTeacher = role === 'teacher';
   const isAssigned = assignments.some(a => a.lessonId === lesson.id);
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -411,7 +460,14 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
           {isAssigned && <span className="px-3 py-1 bg-red-100 text-red-600 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-1"><Bell size={12} /> Bài tập về nhà</span>}
           {lesson.topic && <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">{lesson.topic}</span>}
         </div>
-        {progress.completedLessons.includes(lesson.id) && <div className="flex items-center gap-1 text-green-600 font-bold text-sm"><CheckCircle2 size={16} /> Đã xong</div>}
+        <div className="flex items-center gap-2">
+          {isTeacher && onEdit && (
+            <button onClick={onEdit} className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors flex items-center gap-2 font-bold text-xs">
+              <Settings size={16} /> Sửa nội dung
+            </button>
+          )}
+          {progress.completedLessons.includes(lesson.id) && <div className="flex items-center gap-1 text-green-600 font-bold text-sm"><CheckCircle2 size={16} /> Đã xong</div>}
+        </div>
       </div>
       <h2 className="text-4xl md:text-5xl font-black text-orange-900 mb-8 tracking-tight">{lesson.title}</h2>
       <div className="flex-grow space-y-12">
@@ -572,6 +628,104 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
           />
         )}
       </AnimatePresence>
+    </motion.div>
+  );
+}
+
+function LessonEditor({ lesson, onSave, onCancel }: { lesson: Lesson, onSave: (id: string, updates: Partial<Lesson>) => void, onCancel: () => void }) {
+  const [formData, setFormData] = useState({
+    title: lesson.title,
+    content: lesson.content,
+    passage: Array.isArray(lesson.passage) ? lesson.passage.join('\n') : (lesson.passage || ''),
+    examples: lesson.examples.join(', '),
+    topic: lesson.topic || ''
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(lesson.id, {
+      title: formData.title,
+      content: formData.content,
+      passage: formData.passage.includes('\n') ? formData.passage.split('\n') : formData.passage,
+      examples: formData.examples.split(',').map(s => s.trim()).filter(s => s !== ''),
+      topic: formData.topic
+    });
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-sm border-2 border-emerald-100 min-h-[70vh]">
+      <div className="flex items-center justify-between mb-8">
+        <h2 className="text-3xl font-black text-emerald-900">Chỉnh sửa bài học</h2>
+        <button onClick={onCancel} className="p-2 hover:bg-slate-100 rounded-full text-slate-400">✕</button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Tiêu đề bài học</label>
+          <input
+            type="text"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Nội dung chính (Học âm/vần)</label>
+          <input
+            type="text"
+            value={formData.content}
+            onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none text-2xl font-black text-orange-600"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Chủ đề (Tùy chọn)</label>
+          <input
+            type="text"
+            value={formData.topic}
+            onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Từ ví dụ (Cắt nhau bằng dấu phẩy)</label>
+          <input
+            type="text"
+            value={formData.examples}
+            onChange={(e) => setFormData({ ...formData, examples: e.target.value })}
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none"
+            placeholder="Ví dụ: ba, bà, bá"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Đoạn văn luyện đọc (Mỗi dòng một đoạn)</label>
+          <textarea
+            value={formData.passage}
+            onChange={(e) => setFormData({ ...formData, passage: e.target.value })}
+            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none min-h-[200px]"
+          />
+        </div>
+
+        <div className="pt-6 flex gap-3">
+          <button
+            type="submit"
+            className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-700 flex items-center justify-center gap-2"
+          >
+            <Save size={20} /> Lưu thay đổi
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200"
+          >
+            Hủy
+          </button>
+        </div>
+      </form>
     </motion.div>
   );
 }

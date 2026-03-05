@@ -38,6 +38,7 @@ export interface UserProfile {
   id: string;
   name: string;
   classId?: string;
+  role?: string;
 }
 
 export interface ClassGroup {
