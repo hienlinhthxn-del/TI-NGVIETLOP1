@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, Reorder, AnimatePresence } from 'motion/react';
+import { motion, Reorder, AnimatePresence } from 'framer-motion';
 import { Sparkles, CheckCircle2 } from 'lucide-react';
 
 interface WordBuilderProps {
@@ -55,7 +55,7 @@ export const WordBuilder: React.FC<WordBuilderProps> = ({ word, parts, onComplet
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       {!isCorrect && (
         <p className="text-indigo-400 text-sm font-medium italic">Kéo thả các ô chữ để thay đổi vị trí nhé!</p>
       )}

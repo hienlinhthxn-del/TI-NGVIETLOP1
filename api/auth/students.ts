@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import dbConnect from '../../src/services/mongodb';
-import { User } from '../../src/data/models';
+import dbConnect from '../../src/services/mongodb.js';
+import { User } from '../../src/data/models.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Thêm headers CORS

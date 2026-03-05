@@ -193,27 +193,6 @@ export const useProgress = () => {
   useEffect(() => {
     localStorage.setItem(`htl1-progress-${currentUserId}`, JSON.stringify(progress));
 
-    // Sync with leaderboard
-    const syncLeaderboard = async () => {
-      try {
-        await fetch('/api/leaderboard', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            username: progress.username,
-            points: progress.points,
-            lessonsCompleted: progress.completedLessons.length
-          })
-        });
-      } catch (e) {
-        // console.error("Failed to sync leaderboard", e);
-      }
-    };
-
-    if (progress.points > 0) {
-      syncLeaderboard();
-    }
-
     // ĐỒNG BỘ LÊN MONGODB
     const syncToCloud = async () => {
       try {

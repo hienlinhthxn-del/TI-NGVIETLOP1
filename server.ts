@@ -1,169 +1,177 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
-import Database from "better-sqlite3";
+import mongoose from "mongoose";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import { User, Progress } from "./src/data/models.ts"; // Import models vừa tạo
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const db = new Database("learning.db");
+// Kết nối MongoDB
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/tieng-viet-1";
 
-// Initialize database
-db.exec(`
-  CREATE TABLE IF NOT EXISTS leaderboard (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE,
-    points INTEGER DEFAULT 0,
-    lessons_completed INTEGER DEFAULT 0,
-    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`);
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log("✅ Connected to MongoDB"))
+  .catch(err => console.error("❌ MongoDB connection error:", err));
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS user_progress (
-    user_id TEXT PRIMARY KEY,
-    data TEXT,
-    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`);
+// Hàm khởi tạo dữ liệu mẫu (Seed)
+async function seedDatabase() {
+  try {
+    const adminExists = await User.findOne({ username: "admin" });
+    if (!adminExists) {
+      await User.create({
+        id: "admin",
+        username: "admin",
+        password: "admin123",
+        fullName: "Giáo Viên Quản Trị",
+        role: "teacher",
+        classId: "1A3"
+      });
+      console.log("Created admin user");
+    }
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    username TEXT UNIQUE,
-    password TEXT,
-    full_name TEXT,
-    role TEXT,
-    class_id TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`);
+    const parentExists = await User.findOne({ username: "parent" });
+    if (!parentExists) {
+      await User.create({
+        id: "phuhuynh01",
+        username: "parent",
+        password: "123456",
+        fullName: "Phụ Huynh Bé An",
+        role: "parent",
+        classId: "1A3"
+      });
+      console.log("Created parent user");
+    }
 
-const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
-if (userCount.count === 0) {
-  const insertUser = db.prepare("INSERT INTO users (id, username, password, full_name, role, class_id) VALUES (?, ?, ?, ?, ?, ?)");
-  insertUser.run("admin", "admin", "admin123", "Giáo Viên Quản Trị", "teacher", "1A3");
+    const studentCount = await User.countDocuments({ role: "student" });
+    if (studentCount === 0) {
+      const sampleStudents = [
+        { id: "hs01", name: "Hà Tâm An" },
+        { id: "hs02", name: "Vũ Ngọc Khánh An" },
+        { id: "hs03", name: "Hoàng Diệu Anh" },
+        { id: "hs04", name: "Quàng Tuấn Anh" },
+        { id: "hs05", name: "Lê Bảo Châu" }
+      ];
 
-  // Nạp sẵn danh sách học sinh mẫu vào DB
-  const sampleStudents = [
-    { id: "hs01", name: "Hà Tâm An" },
-    { id: "hs02", name: "Vũ Ngọc Khánh An" },
-    { id: "hs03", name: "Hoàng Diệu Anh" },
-    { id: "hs04", name: "Quàng Tuấn Anh" },
-    { id: "hs05", name: "Lê Bảo Châu" }
-  ];
-
-  sampleStudents.forEach(s => {
-    insertUser.run(s.id, s.id, "", s.name, "student", "1A3");
-  });
-
-  // Nạp sẵn 1 tài khoản phụ huynh mẫu
-  insertUser.run("phuhuynh01", "parent", "123456", "Phụ Huynh Bé An", "parent", "1A3");
-
-  console.log("Seeded default users (Teacher: admin/admin123, Students: hs01-hs05)");
+      for (const s of sampleStudents) {
+        await User.create({
+          id: s.id,
+          username: s.id,
+          password: "",
+          fullName: s.name,
+          role: "student",
+          classId: "1A3"
+        });
+      }
+      console.log("Seeded sample students");
+    }
+  } catch (error) {
+    console.error("Seeding error:", error);
+  }
 }
 
-// Đảm bảo tài khoản Phụ huynh mẫu luôn tồn tại
-const parentExists = db.prepare("SELECT id FROM users WHERE username = 'parent'").get();
-if (!parentExists) {
-  const insertUser = db.prepare("INSERT INTO users (id, username, password, full_name, role, class_id) VALUES (?, ?, ?, ?, ?, ?)");
-  insertUser.run("phuhuynh01", "parent", "123456", "Phụ Huynh Bé An", "parent", "1A3");
-  console.log("Created sample parent account: parent / 123456");
-}
-
-// Cập nhật tất cả học sinh đã có để mật khẩu là trống (để HS đăng nhập nhanh bằng cách chọn tên)
-db.prepare("UPDATE users SET password = '' WHERE role = 'student' AND password = '123'").run();
+seedDatabase();
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3002; // Đổi sang 3002 để tránh lỗi cổng 3001 đang bận
 
   app.use(express.json());
 
   // API routes
-  app.get("/api/leaderboard", (req, res) => {
-    const players = db.prepare("SELECT username, points, lessons_completed FROM leaderboard ORDER BY points DESC LIMIT 10").all();
-    res.json(players);
-  });
-
-  app.post("/api/leaderboard/update", (req, res) => {
-    const { username, points, lessonsCompleted } = req.body;
-    if (!username) return res.status(400).json({ error: "Username required" });
-
-    const upsert = db.prepare(`
-      INSERT INTO leaderboard (username, points, lessons_completed, last_updated)
-      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-      ON CONFLICT(username) DO UPDATE SET
-        points = MAX(points, excluded.points),
-        lessons_completed = MAX(lessons_completed, excluded.lessons_completed),
-        last_updated = CURRENT_TIMESTAMP
-    `);
-
-    upsert.run(username, points, lessonsCompleted);
-    res.json({ success: true });
-  });
-
-  // API tiến độ học tập (Cloud Sync)
-  app.get("/api/progress", (req, res) => {
-    const { userId } = req.query;
-    if (!userId) return res.status(400).json({ error: "userId required" });
-
-    const row = db.prepare("SELECT data FROM user_progress WHERE user_id = ?").get(userId) as { data: string };
-    if (row) {
-      res.json(JSON.parse(row.data));
-    } else {
-      res.status(404).json({ error: "Progress not found" });
+  app.get("/api/leaderboard", async (req, res) => {
+    try {
+      // Lấy top 10 người dùng có điểm cao nhất từ bảng Progress
+      // ProgressSchema không có field 'role', không filter theo role
+      const players = await Progress.find({}).sort({ points: -1 }).limit(10);
+      const formatted = players.map((p: any) => ({
+        username: p.username,
+        points: p.points,
+        lessons_completed: (p.completedLessons || []).length
+      }));
+      res.json(formatted);
+    } catch (err: any) {
+      console.error('Leaderboard error:', err.message);
+      res.status(500).json({ error: 'Lỗi lấy bảng xếp hạng' });
     }
   });
 
-  app.post("/api/progress", (req, res) => {
+  // API /api/leaderboard/update không cần thiết nữa vì ta lưu trực tiếp vào Progress
+
+  // API tiến độ học tập (Cloud Sync)
+  app.get("/api/progress", async (req, res) => {
+    const { userId } = req.query;
+    if (!userId) return res.status(400).json({ error: "userId required" });
+
+    try {
+      const progress = await Progress.findOne({ userId });
+      if (progress) {
+        // Trả về toàn bộ object tiến độ
+        res.json(progress.toObject());
+      } else {
+        res.status(404).json({ error: "Progress not found" });
+      }
+    } catch (err: any) {
+      console.error('Progress fetch error:', err.message);
+      res.status(500).json({ error: 'Lỗi lấy dữ liệu tiến độ' });
+    }
+  });
+
+  app.post("/api/progress", async (req, res) => {
     const { userId, ...progressData } = req.body;
     if (!userId) return res.status(400).json({ error: "userId required" });
 
-    const upsert = db.prepare(`
-      INSERT INTO user_progress (user_id, data, last_updated)
-      VALUES (?, ?, CURRENT_TIMESTAMP)
-      ON CONFLICT(user_id) DO UPDATE SET
-        data = excluded.data,
-        last_updated = CURRENT_TIMESTAMP
-    `);
+    // Cập nhật hoặc tạo mới progress
+    await Progress.findOneAndUpdate(
+      { userId },
+      {
+        userId,
+        username: progressData.username,
+        role: 'student', // Mặc định là student
+        data: progressData,
+        points: progressData.points || 0,
+        completedLessons: progressData.completedLessons || [],
+        lastUpdated: new Date()
+      },
+      { upsert: true, new: true }
+    );
 
-    upsert.run(userId, JSON.stringify(progressData));
     res.json({ success: true });
   });
 
   // API Authentication
-  // Thêm handler cho GET /api/auth để hỗ trợ kiểm tra seed trên Localhost
   app.get("/api/auth", (req, res) => {
     if (req.query.seed) {
+      seedDatabase();
       return res.json({
         success: true,
-        message: "Localhost (SQLite): Dữ liệu đã được khởi tạo tự động khi khởi động server.",
-        results: {
-          admin: "exists",
-          parent: "exists",
-          students: "exists (managed by SQLite)"
-        }
+        message: "Localhost (MongoDB): Đã kích hoạt seed dữ liệu."
       });
     }
     res.status(405).json({ error: "Method not allowed" });
   });
 
-  app.post("/api/auth", (req, res) => {
+  app.post("/api/auth", async (req, res) => {
     const { action, username, password, fullName, role, classId } = req.body;
 
     if (action === "register") {
       try {
         const id = Date.now().toString();
-        const insert = db.prepare("INSERT INTO users (id, username, password, full_name, role, class_id) VALUES (?, ?, ?, ?, ?, ?)");
-        insert.run(id, username, password, fullName, role || "student", classId || "1A3");
+        await User.create({
+          id,
+          username,
+          password,
+          fullName,
+          role: role || "student",
+          classId: classId || "1A3"
+        });
         res.status(201).json({ success: true, user: { id, username, fullName, role: role || "student" } });
       } catch (e: any) {
-        if (e.message.includes("UNIQUE constraint failed")) {
+        if (e.code === 11000) { // Duplicate key error code in Mongo
           res.status(400).json({ error: "Tài khoản đã tồn tại" });
         } else {
           res.status(500).json({ error: "Lỗi đăng ký: " + e.message });
@@ -171,16 +179,17 @@ async function startServer() {
       }
     } else if (action === "login") {
       console.log(`Login attempt: ${username} / ${password}`);
-      const user = db.prepare("SELECT * FROM users WHERE username = ? AND password = ?").get(username, password) as any;
+      const user = await User.findOne({ username, password: password || "" });
+
       if (user) {
         res.json({
           success: true,
           user: {
-            id: user.id,
+            id: user._id,
             username: user.username,
-            fullName: user.full_name,
+            fullName: user.fullName,   // Mongoose schema field
             role: user.role,
-            classId: user.class_id // Sửa lỗi: Map đúng cột class_id từ DB
+            classId: user.classId     // Mongoose schema field
           }
         });
       } else {
@@ -189,14 +198,14 @@ async function startServer() {
     }
   });
 
-  app.get("/api/auth/students", (req, res) => {
+  app.get("/api/auth/students", async (req, res) => {
     const { classId } = req.query;
     try {
-      const students = db.prepare("SELECT id, full_name as fullName, username, role FROM users WHERE class_id = ? AND role = 'student'").all(classId || "1A3");
+      const students = await User.find({ classId: classId || "1A3", role: "student" });
       res.json(students);
     } catch (error: any) {
-      console.error("Lỗi lấy danh sách học sinh (Local):", error.message);
-      res.status(500).json({ error: "Lỗi cơ sở dữ liệu local. Hãy thử xóa file learning.db để tạo lại." });
+      console.error("Lỗi lấy danh sách học sinh:", error.message);
+      res.status(500).json({ error: "Lỗi cơ sở dữ liệu." });
     }
   });
 

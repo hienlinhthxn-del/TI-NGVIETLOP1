@@ -1,29 +1,31 @@
-const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+// Lấy cấu hình từ biến môi trường
+const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "dx8v9vuxo";
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_PRESET || "ml_default"; // Bạn cần tạo Unsigned Preset trên Cloudinary
 
-export const uploadAudioToCloud = async (recordingId: string, audioBlob: Blob): Promise<string | null> => {
-  if (!CLOUD_NAME || !UPLOAD_PRESET) {
-    console.warn("Chưa cấu hình Cloudinary. Bỏ qua bước upload.");
-    return null;
-  }
-
+/**
+ * Upload audio blob lên Cloudinary
+ * @param recordingId ID duy nhất của file ghi âm (vd: student-hs01-lesson1-main)
+ * @param audioBlob File âm thanh dạng Blob
+ */
+export const uploadAudioToCloud = async (recordingId: string, audioBlob: Blob) => {
   const formData = new FormData();
   formData.append("file", audioBlob);
   formData.append("upload_preset", UPLOAD_PRESET);
   formData.append("public_id", recordingId);
+  formData.append("resource_type", "video"); // Cloudinary thường xử lý audio qua API video/raw
 
   try {
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`, {
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, {
       method: "POST",
-      body: formData,
+      body: formData
     });
-    
-    if (!res.ok) throw new Error("Cloudinary upload failed");
-    
+
+    if (!res.ok) throw new Error("Upload failed");
+
     const data = await res.json();
-    return data.secure_url;
-  } catch (error) {
-    console.error("Upload failed:", error);
-    return null;
+    return data;
+  } catch (e) {
+    console.error("Cloudinary Upload Error:", e);
+    throw e;
   }
 };
