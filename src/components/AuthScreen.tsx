@@ -30,12 +30,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, loginService })
 
     const fetchStudents = async () => {
         try {
-            const res = await fetch('/api/auth/students?classId=1A3'); // Mặc định lớp 1A3
+            const res = await fetch('/api/auth/students?classId=1A3');
+            if (!res.ok) throw new Error("Server trả về lỗi khi lấy danh sách học sinh");
             const data = await res.json();
-            setStudents(data);
-        } catch (e) {
-            console.error("Failed to fetch students");
-            setError("Không thể tải danh sách học sinh. Hãy kiểm tra server.");
+            if (Array.isArray(data)) {
+                setStudents(data);
+            } else {
+                throw new Error("Dữ liệu học sinh không hợp lệ");
+            }
+        } catch (e: any) {
+            console.error("Failed to fetch students", e);
+            setError("Không thể tải danh sách học sinh. Vui lòng thử lại hoặc nhấn Seed DB.");
         }
     };
 
@@ -140,9 +145,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, loginService })
                             >
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">
-                                        {s.fullName[0]}
+                                        {(s.fullName || s.username || "H")[0].toUpperCase()}
                                     </div>
-                                    <span className="font-bold text-slate-700">{s.fullName}</span>
+                                    <span className="font-bold text-slate-700">{s.fullName || s.username}</span>
                                 </div>
                                 <Check size={18} className="text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </button>
