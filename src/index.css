@@ -1,6 +1,8 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme {
+:root {
   --font-sans: "Quicksand", ui-sans-serif, system-ui, sans-serif;
 }
 
