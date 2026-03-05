@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Mic, Square, Play, RefreshCw, CheckCircle2, Sparkles } from 'lucide-react';
 import { analyzeReading } from '../services/geminiService';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface AudioRecorderProps {
   expectedText: string;
@@ -52,7 +52,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ expectedText, onFe
 
   const handleAnalyze = async () => {
     if (!chunksRef.current.length) return;
-    
+
     setIsAnalyzing(true);
     try {
       const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
@@ -73,7 +73,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({ expectedText, onFe
   return (
     <div className="flex flex-col items-center gap-4 p-6 bg-white rounded-3xl shadow-sm border border-orange-100">
       <div className="text-sm font-medium text-orange-600 uppercase tracking-wider">Luyện đọc cùng AI</div>
-      
+
       <div className="flex items-center gap-4">
         {!isRecording && !audioUrl && (
           <motion.button

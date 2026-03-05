@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Mic, Square, Play, RefreshCw, Sparkles, Loader2 } from 'lucide-react';
 import { analyzeReading } from '../services/geminiService';
 import { uploadAudioToCloud } from '../services/cloudAudioService'; // Đảm bảo import đúng
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface StudentAudioRecorderProps {
   expectedText: string | string[];

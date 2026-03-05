@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, XCircle, Trophy, ArrowRight } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -39,7 +39,7 @@ export const QuizComponent: React.FC<QuizProps> = ({ questions, onComplete }) =>
 
   if (showResult) {
     return (
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         className="text-center p-8 bg-orange-50 rounded-3xl border-2 border-orange-200"
@@ -60,9 +60,9 @@ export const QuizComponent: React.FC<QuizProps> = ({ questions, onComplete }) =>
         <span>Câu hỏi {currentIdx + 1}/{questions.length}</span>
         <span>Điểm: {score}</span>
       </div>
-      
+
       <h3 className="text-xl font-bold text-orange-900 leading-tight">{q.question}</h3>
-      
+
       <div className="grid grid-cols-1 gap-3">
         {q.options.map((opt, i) => (
           <motion.button
@@ -73,8 +73,8 @@ export const QuizComponent: React.FC<QuizProps> = ({ questions, onComplete }) =>
             className={cn(
               "p-4 rounded-2xl border-2 text-left font-bold transition-all flex items-center justify-between",
               selected === null ? "border-orange-100 hover:border-orange-300 bg-white" :
-              i === q.correctAnswer ? "border-green-500 bg-green-50 text-green-700" :
-              i === selected ? "border-red-500 bg-red-50 text-red-700" : "border-gray-100 bg-gray-50 opacity-50"
+                i === q.correctAnswer ? "border-green-500 bg-green-50 text-green-700" :
+                  i === selected ? "border-red-500 bg-red-50 text-red-700" : "border-gray-100 bg-gray-50 opacity-50"
             )}
           >
             {opt}
