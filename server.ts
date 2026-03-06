@@ -100,6 +100,39 @@ async function startServer() {
     }
   });
 
+  // API Lessons Management
+  app.get("/api/lessons", async (req, res) => {
+    try {
+      const { Lesson } = await import('./src/data/models.js');
+      const { lessons: initialLessons } = await import('./src/data/lessons.js');
+      let dbLessons = await Lesson.find({}).sort({ id: 1 });
+      if (dbLessons.length === 0) {
+        console.log("Seeding initial lessons to DB...");
+        await Lesson.insertMany(initialLessons);
+        dbLessons = await Lesson.find({}).sort({ id: 1 });
+      }
+      res.json(dbLessons);
+    } catch (err: any) {
+      console.error('Lessons fetch error:', err.message);
+      res.status(500).json({ error: 'Lỗi tải bài học' });
+    }
+  });
+
+  app.post("/api/lessons", async (req, res) => {
+    try {
+      const { Lesson } = await import('./src/data/models.js');
+      const { id, updates } = req.body;
+      const updatedLesson = await Lesson.findOneAndUpdate(
+        { id },
+        { ...updates, updatedAt: new Date() },
+        { new: true, upsert: true }
+      );
+      res.json(updatedLesson);
+    } catch (err: any) {
+      res.status(500).json({ error: 'Lỗi cập nhật bài học' });
+    }
+  });
+
   // API /api/leaderboard/update không cần thiết nữa vì ta lưu trực tiếp vào Progress
 
   // API tiến độ học tập (Cloud Sync)

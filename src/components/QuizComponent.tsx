@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { CheckCircle2, XCircle, Trophy, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
@@ -9,18 +9,18 @@ function cn(...inputs: ClassValue[]) {
 }
 
 interface QuizProps {
-  questions: { question: string; options: string[]; correctAnswer: number }[];
+  questions?: { question: string; options: string[]; correctAnswer: number }[];
   onComplete: (score: number) => void;
 }
 
-export const QuizComponent: React.FC<QuizProps> = ({ questions, onComplete }) => {
+export const QuizComponent: React.FC<QuizProps> = ({ questions = [], onComplete }) => {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const [showResult, setShowResult] = useState(false);
 
   const handleSelect = (idx: number) => {
-    if (selected !== null) return;
+    if (selected !== null || !questions[currentIdx]) return;
     setSelected(idx);
     if (idx === questions[currentIdx].correctAnswer) {
       setScore(s => s + 1);
@@ -33,9 +33,13 @@ export const QuizComponent: React.FC<QuizProps> = ({ questions, onComplete }) =>
       setSelected(null);
     } else {
       setShowResult(true);
-      onComplete(Math.round((score / questions.length) * 100));
+      onComplete(questions.length > 0 ? Math.round((score / questions.length) * 100) : 0);
     }
   };
+
+  if (questions.length === 0) {
+    return <div className="text-center p-8 text-slate-400 italic">Không có câu hỏi trắc nghiệm cho bài này.</div>;
+  }
 
   if (showResult) {
     return (
@@ -53,6 +57,7 @@ export const QuizComponent: React.FC<QuizProps> = ({ questions, onComplete }) =>
   }
 
   const q = questions[currentIdx];
+  if (!q) return null;
 
   return (
     <div className="space-y-6">

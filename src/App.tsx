@@ -389,10 +389,10 @@ export default function App() {
                   </AnimatePresence>
                 </div>
               </div>
-            ) : <TeacherDashboard progress={progress} users={users} addBulkUsers={addBulkUsers} classes={classes} onAddClass={addClass} onReset={resetToDefault} />}
+            ) : <TeacherDashboard progress={progress} users={users} addBulkUsers={addBulkUsers} classes={classes} onAddClass={addClass} onReset={resetToDefault} lessons={lessons} />}
           </>
         )}
-        {role === 'parent' && <ParentDashboard users={users} classes={classes} />}
+        {role === 'parent' && <ParentDashboard users={users} classes={classes} lessons={lessons} />}
       </main>
     </div>
   );
@@ -471,7 +471,7 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
       </div>
       <h2 className="text-4xl md:text-5xl font-black text-orange-900 mb-8 tracking-tight">{lesson.title}</h2>
       <div className="flex-grow space-y-12">
-        {lesson.book === 1 && (
+        {lesson.book === 1 && lesson.content && (
           <div className="flex flex-col items-center justify-center p-12 bg-orange-50/50 rounded-[2rem] border-2 border-dashed border-orange-200">
             <div className="text-8xl md:text-9xl font-black text-orange-600 drop-shadow-sm">{lesson.content}</div>
             <p className="mt-4 text-orange-900/50 font-medium italic mb-6">Hãy cùng đọc to nhé!</p>
@@ -493,7 +493,7 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
           </div>
         )}
 
-        {lesson.examples.length > 0 && (
+        {lesson.examples && lesson.examples.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {lesson.examples.map((ex: string, i: number) => (
               <div key={i} className="bg-white border border-orange-100 p-4 rounded-2xl flex flex-col items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
@@ -557,7 +557,7 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
           </div>
         )}
 
-        {lesson.quiz && (
+        {lesson.quiz && lesson.quiz.length > 0 && (
           <div className="mt-12 p-8 bg-white border-2 border-orange-100 rounded-[2rem]">
             <h3 className="text-xl font-bold text-orange-900 mb-6">Bài tập trắc nghiệm</h3>
             <QuizComponent questions={lesson.quiz} onComplete={(score) => completeLesson(lesson.id, score)} />
@@ -778,7 +778,7 @@ function WelcomeBox() {
   );
 }
 
-function TeacherDashboard({ progress, users, addBulkUsers, classes, onAddClass, onReset }: { progress: ProgressData, users: UserProfile[], addBulkUsers: (names: string[], classId: string) => number, classes: ClassGroup[], onAddClass: (name: string) => void, onReset?: () => void }) {
+function TeacherDashboard({ progress, users, addBulkUsers, classes, onAddClass, onReset, lessons }: { progress: ProgressData, users: UserProfile[], addBulkUsers: (names: string[], classId: string) => number, classes: ClassGroup[], onAddClass: (name: string) => void, onReset?: () => void, lessons: Lesson[] }) {
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [selectedClassId, setSelectedClassId] = useState(classes[0]?.id || '');
@@ -1121,7 +1121,7 @@ function TeacherDashboard({ progress, users, addBulkUsers, classes, onAddClass, 
   );
 }
 
-function ParentDashboard({ users, classes }: { users: UserProfile[], classes: ClassGroup[] }) {
+function ParentDashboard({ users, classes, lessons }: { users: UserProfile[], classes: ClassGroup[], lessons: Lesson[] }) {
   const { assignments } = useAssignments();
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
