@@ -1087,34 +1087,46 @@ function TeacherDashboard({ progress, users, addUser, addBulkUsers, classes, onA
   const [allStudentsProgress, setAllStudentsProgress] = useState<Record<string, ProgressData>>({});
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Tải tiến độ của tất cả học sinh từ server khi chọn lớp hoặc khi danh sách users thay đổi
-  useEffect(() => {
-    const fetchAllProgress = async () => {
-      setIsSyncing(true);
-      const progressMap: Record<string, ProgressData> = {};
+  const fetchAllProgress = async () => {
+    if (classStudents.length === 0) return;
+    setIsSyncing(true);
+    const progressMap: Record<string, ProgressData> = {};
 
-      try {
-        // Fetch song song để tối ưu tốc độ
+    try {
+      // Sử dụng API bulk fetch mới để lấy tất cả dữ liệu chỉ trong 1 request
+      const userIds = classStudents.map(u => u.id).join(',');
+      const res = await fetch(`/api/progress?userIds=${userIds}`);
+
+      if (res.ok) {
+        const results = await res.json();
+        if (Array.isArray(results)) {
+          results.forEach((p: any) => {
+            progressMap[p.userId] = p;
+          });
+        }
+      } else {
+        // Fallback sang fetch từng người nếubulk fetch lỗi (vd: URL quá dài)
         await Promise.all(classStudents.map(async (user) => {
           try {
-            const res = await fetch(`/api/progress?userId=${user.id}`);
-            if (res.ok) {
-              const data = await res.json();
+            const r = await fetch(`/api/progress?userId=${user.id}`);
+            if (r.ok) {
+              const data = await r.json();
               if (data) progressMap[user.id] = data;
             }
-          } catch (e) {
-            console.error(`Error fetching progress for ${user.id}:`, e);
-          }
+          } catch (e) { }
         }));
-        setAllStudentsProgress(progressMap);
-      } finally {
-        setIsSyncing(false);
       }
-    };
-
-    if (classStudents.length > 0) {
-      fetchAllProgress();
+      setAllStudentsProgress(progressMap);
+    } catch (error) {
+      console.error("Error fetching all progress:", error);
+    } finally {
+      setIsSyncing(false);
     }
+  };
+
+  // Tải tiến độ của tất cả học sinh từ server khi chọn lớp hoặc khi danh sách users thay đổi
+  useEffect(() => {
+    fetchAllProgress();
   }, [selectedClassId, users.length]);
 
   const students = classStudents.map(user => {
@@ -1340,7 +1352,7 @@ function TeacherDashboard({ progress, users, addUser, addBulkUsers, classes, onA
       </div>
 
       <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
             <h2 className="text-2xl font-bold text-slate-900">Danh sách lớp</h2>
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
@@ -1355,6 +1367,14 @@ function TeacherDashboard({ progress, users, addUser, addBulkUsers, classes, onA
               ))}
               <button onClick={() => setIsAddingClass(true)} className="px-3 py-1 rounded-lg text-sm font-bold text-emerald-600 hover:bg-emerald-100 transition-all"><Plus size={16} /></button>
             </div>
+            <button
+              onClick={fetchAllProgress}
+              disabled={isSyncing}
+              className="p-2 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-colors disabled:opacity-50"
+              title="Làm mới dữ liệu từ máy chủ"
+            >
+              <RefreshCw size={16} className={cn(isSyncing && "animate-spin")} />
+            </button>
 
             {/* Add Class Modal/Input */}
             {isAddingClass && (

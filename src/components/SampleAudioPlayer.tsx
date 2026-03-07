@@ -52,31 +52,47 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
         }
       }
 
-      // Sử dụng Browser TTS (Giọng đọc có sẵn trên trình duyệt)
-      // Giải pháp này ổn định hơn, không tốn phí API và không bị lỗi model
       const textToSpeak = Array.isArray(text) ? text.join(' ') : text;
-      
-      window.speechSynthesis.cancel(); // Dừng giọng đọc cũ nếu có
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.lang = 'vi-VN'; // Thiết lập tiếng Việt
-      utterance.rate = 0.9; // Đọc chậm rãi một chút cho học sinh lớp 1
-      
-      // Cố gắng chọn giọng tiếng Việt chuẩn nếu có
-      const voices = window.speechSynthesis.getVoices();
-      const viVoice = voices.find(v => v.lang.includes('vi'));
-      if (viVoice) utterance.voice = viVoice;
 
-      utterance.onend = () => setIsLoading(false);
-      utterance.onerror = () => setIsLoading(false);
-      
-      window.speechSynthesis.speak(utterance);
+      // Hỗ trợ tốt hơn cho Mobile (iOS/Android)
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.lang = 'vi-VN';
+      utterance.rate = 0.9;
+
+      const setVoiceAndSpeak = () => {
+        const voices = window.speechSynthesis.getVoices();
+        const viVoice = voices.find(v => v.lang.includes('vi'));
+        if (viVoice) utterance.voice = viVoice;
+
+        utterance.onend = () => setIsLoading(false);
+        utterance.onerror = (e) => {
+          console.error("SpeechSynthesis Error:", e);
+          setIsLoading(false);
+          // Fallback đơn giản cho mobile nếu lỗi
+          if (textToSpeak.length < 50) {
+            console.warn("Retrying with default voice...");
+            window.speechSynthesis.speak(utterance);
+          }
+        };
+
+        window.speechSynthesis.speak(utterance);
+      };
+
+      if (window.speechSynthesis.getVoices().length === 0) {
+        window.speechSynthesis.onvoiceschanged = setVoiceAndSpeak;
+        // Warm up cho iOS
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
+      } else {
+        setVoiceAndSpeak();
+      }
 
     } catch (err) {
       console.error("Audio Playback Error:", err);
-      // Hiển thị lỗi cụ thể cho người dùng
-      alert(err instanceof Error ? err.message : "Không thể phát âm thanh");
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const startRecording = async () => {
@@ -135,11 +151,10 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
       <button
         onClick={handlePlay}
         disabled={isLoading || isRecording}
-        className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all disabled:opacity-50 ${
-          hasCustomAudio 
-            ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-200' 
+        className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all disabled:opacity-50 ${hasCustomAudio
+            ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-200'
             : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-        }`}
+          }`}
         title={hasCustomAudio ? "Nghe giọng giáo viên (Đã sửa)" : "Nghe giọng AI"}
       >
         {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Volume2 size={18} />}
@@ -181,7 +196,7 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
               />
             </>
           )}
-          
+
           {hasCustomAudio && !isRecording && (
             <button
               onClick={handleDelete}

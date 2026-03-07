@@ -11,7 +11,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'GET') {
-        const { userId } = req.query;
+        const { userId, userIds } = req.query;
+
+        // Hỗ trợ lấy nhiều tiến độ cùng lúc
+        if (userIds) {
+            const ids = (userIds as string).split(',');
+            try {
+                const results = await Progress.find({ userId: { $in: ids } }).lean();
+                return res.status(200).json(results);
+            } catch (error: any) {
+                return res.status(500).json({ error: 'INTERNAL_SERVER_ERROR', details: error.message });
+            }
+        }
+
         if (!userId) return res.status(400).json({ error: 'userId is required' });
 
         try {
