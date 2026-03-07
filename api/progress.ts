@@ -42,16 +42,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const { userId, ...progressData } = req.body;
         if (!userId) return res.status(400).json({ error: 'userId is required' });
 
+        // Làm sạch dữ liệu để tránh lỗi MongoDB
+        delete (progressData as any)._id;
+        delete (progressData as any).__v;
+
         try {
+            console.log(`[API] Saving progress for user: ${userId}`);
             const updated = await Progress.findOneAndUpdate(
                 { userId },
                 { ...progressData, userId, lastActivity: new Date() },
-                { upsert: true, new: true }
+                { upsert: true, new: true, setDefaultsOnInsert: true }
             );
             return res.status(200).json(updated);
-        } catch (error) {
-            console.error('Progress update error:', error);
-            return res.status(500).json({ error: 'Internal Server Error' });
+        } catch (error: any) {
+            console.error('Progress update error:', error.message);
+            return res.status(500).json({ error: 'Internal Server Error', details: error.message });
         }
     }
 

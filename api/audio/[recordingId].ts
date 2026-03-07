@@ -10,8 +10,9 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     const cloudName = process.env.VITE_CLOUDINARY_CLOUD_NAME || "dx8v9vuxo";
 
     // Chuyển hướng tới URL audio trên Cloudinary
-    // Thêm .mp3 để Cloudinary tự động chuyển đổi định dạng giúp trình duyệt nào cũng nghe được
-    const audioUrl = `https://res.cloudinary.com/${cloudName}/video/upload/${recordingId}.mp3`;
+    // Thêm resource_type=video ngầm định qua path /video/
+    // Thêm f_auto,q_auto để tối ưu hóa việc tải và tương thích
+    const audioUrl = `https://res.cloudinary.com/${cloudName}/video/upload/f_auto,q_auto/${recordingId}.mp3`;
 
     res.redirect(audioUrl);
 }

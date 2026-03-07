@@ -195,26 +195,48 @@ export const useProgress = () => {
     localStorage.setItem(`htl1-progress-${currentUserId}`, JSON.stringify(progress));
 
     // ĐỒNG BỘ LÊN MONGODB
-    const syncToCloud = async () => {
+    const syncToCloud = async (overrideProgress?: ProgressData) => {
+      if (currentUserId === 'default') return;
+      const dataToSync = overrideProgress || progress;
+      if (!dataToSync) return;
+
       try {
+        const { _id, __v, ...cleanProgress } = (dataToSync as any);
+
         await fetch('/api/progress', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: currentUserId, ...progress })
+          body: JSON.stringify({ userId: currentUserId, ...cleanProgress })
         });
       } catch (e) {
         console.error("Lỗi đồng bộ đám mây:", e);
       }
     };
 
-    // Debounce: Đợi 2 giây sau khi thay đổi mới gửi lên server
+    // Debounce Sync
     const timeoutId = setTimeout(() => {
-      if (progress.points > 0) {
-        syncToCloud();
-      }
-    }, 2000);
+      syncToCloud();
+    }, 5000);
 
-    return () => clearTimeout(timeoutId); // Hủy timeout nếu component unmount
+    return () => clearTimeout(timeoutId);
+  }, [progress, currentUserId]);
+
+  // Đồng bộ ngay lập tức khi ứng dụng bị đóng (Rời khỏi trang)
+  useEffect(() => {
+    const handleUnload = () => {
+      // Vì đây là trigger cuối cùng, ta thử gửi sync qua fetch với keepalive hoặc đơn giản là sync sớm
+      if (currentUserId !== 'default' && progress) {
+        const { _id, __v, ...cleanProgress } = (progress as any);
+        fetch('/api/progress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: currentUserId, ...cleanProgress }),
+          keepalive: true
+        }).catch(() => { });
+      }
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
   }, [progress, currentUserId]);
 
   const addUser = (name: string, classId?: string) => {

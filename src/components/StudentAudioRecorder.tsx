@@ -80,8 +80,11 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
         if (onFeedback) onFeedback(result, audioBlob);
 
         if (recordingId) {
-          // Gửi kèm mimeType và đảm bảo có tên file để Cloudinary xử lý tốt hơn (.webm, .mp4, .ogg)
-          const extension = audioBlob.type.includes('mp4') ? 'mp4' : audioBlob.type.includes('ogg') ? 'ogg' : 'webm';
+          // Gửi kèm mimeType và đảm bảo có tên file để Cloudinary xử lý tốt hơn (.webm, .mp4, .ogg, .mp3)
+          const extension = audioBlob.type.includes('mp4') ? 'mp4' :
+            audioBlob.type.includes('ogg') ? 'ogg' :
+              audioBlob.type.includes('mpeg') ? 'mp3' : 'webm';
+          console.log(`[Upload] Uploading student audio: ${recordingId}.${extension}`);
           uploadAudioToCloud(recordingId, audioBlob, extension).catch(err => console.error("Upload background failed", err));
         }
 
