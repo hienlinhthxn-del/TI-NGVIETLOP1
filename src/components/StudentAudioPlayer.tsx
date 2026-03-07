@@ -10,34 +10,40 @@ export function StudentAudioPlayer({ recordingId }: StudentAudioPlayerProps) {
 
   const handlePlay = () => {
     setIsLoading(true);
-    // API route này sẽ chuyển hướng đến file audio thực tế trên Cloudinary
-    const audio = new Audio(`/api/audio/${recordingId}`);
-    
-    const cleanup = () => {
-      audio.oncanplaythrough = null;
-      audio.onended = null;
-      audio.onerror = null;
-    };
 
-    audio.oncanplaythrough = () => {
-      audio.play().catch(e => {
-        console.error("Audio play failed", e);
-        setIsLoading(false);
-        cleanup();
-      });
+    // Trên Mobile, play() phải được gọi trực tiếp trong click handler
+    const audio = new Audio(`/api/audio/${recordingId}`);
+
+    // Thiết lập các thuộc tính cần thiết cho Mobile
+    audio.preload = "auto";
+
+    audio.onplay = () => {
+      setIsLoading(false);
     };
 
     audio.onended = () => {
       setIsLoading(false);
-      cleanup();
     };
 
     audio.onerror = () => {
       console.error(`Error loading audio from /api/audio/${recordingId}`);
-      alert("Không thể tải bài đọc của học sinh.");
+      alert("Không thể tải bài đọc. Có thể file đang được xử lý hoặc lỗi kết nối.");
       setIsLoading(false);
-      cleanup();
     };
+
+    // Gọi play ngay lập tức
+    const playPromise = audio.play();
+
+    if (playPromise !== undefined) {
+      playPromise.catch(error => {
+        console.error("Playback failed:", error);
+        setIsLoading(false);
+        // Alert nếu bị chặn do auto-play
+        if (error.name === 'NotAllowedError') {
+          alert("Vui lòng nhấn nút phát âm thanh một lần nữa nhé!");
+        }
+      });
+    }
   };
 
   return (

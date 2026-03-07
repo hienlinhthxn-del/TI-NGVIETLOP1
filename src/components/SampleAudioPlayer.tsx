@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, Loader2, Mic, Square, Trash2, Upload } from 'lucide-react';
 import { saveCustomAudio, getCustomAudio, deleteCustomAudio } from '../services/customAudioService';
+import { generateSpeech } from '../services/ttsService';
 
 interface SampleAudioPlayerProps {
   text: string | string[];
@@ -13,6 +14,7 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [hasCustomAudio, setHasCustomAudio] = useState(false);
+  const [customAudioUrl, setCustomAudioUrl] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -27,72 +29,98 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
   useEffect(() => {
     const loadVoices = () => window.speechSynthesis.getVoices();
     loadVoices();
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-    return () => { window.speechSynthesis.onvoiceschanged = null; };
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    };
   }, []);
 
   const checkCustomAudio = async () => {
     if (!recordingId) return;
-    const audio = await getCustomAudio(recordingId);
-    setHasCustomAudio(!!audio);
+    try {
+      const audio = await getCustomAudio(recordingId);
+      if (audio) {
+        if (customAudioUrl) URL.revokeObjectURL(customAudioUrl);
+        setCustomAudioUrl(URL.createObjectURL(audio));
+        setHasCustomAudio(true);
+      } else {
+        setHasCustomAudio(false);
+        setCustomAudioUrl(null);
+      }
+    } catch (e) {
+      console.error("Check custom audio error:", e);
+    }
   };
 
-  const handlePlay = async () => {
+  const speakText = async (textToSpeak: string) => {
     setIsLoading(true);
+
+    // 1. Thử sử dụng Google Gemini TTS (Chất lượng cao, ổn định trên Mobile)
     try {
-      if (recordingId) {
-        const customBlob = await getCustomAudio(recordingId);
-        if (customBlob) {
-          const url = URL.createObjectURL(customBlob);
-          const audio = new Audio(url);
-          audio.onended = () => URL.revokeObjectURL(url);
-          await audio.play();
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      const textToSpeak = Array.isArray(text) ? text.join(' ') : text;
-
-      // Hỗ trợ tốt hơn cho Mobile (iOS/Android)
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.lang = 'vi-VN';
-      utterance.rate = 0.9;
-
-      const setVoiceAndSpeak = () => {
-        const voices = window.speechSynthesis.getVoices();
-        const viVoice = voices.find(v => v.lang.includes('vi'));
-        if (viVoice) utterance.voice = viVoice;
-
-        utterance.onend = () => setIsLoading(false);
-        utterance.onerror = (e) => {
-          console.error("SpeechSynthesis Error:", e);
-          setIsLoading(false);
-          // Fallback đơn giản cho mobile nếu lỗi
-          if (textToSpeak.length < 50) {
-            console.warn("Retrying with default voice...");
-            window.speechSynthesis.speak(utterance);
-          }
+      const base64Audio = await generateSpeech(textToSpeak);
+      if (base64Audio) {
+        const audio = new Audio(`data:audio/mp3;base64,${base64Audio}`);
+        audio.onended = () => setIsLoading(false);
+        audio.onerror = () => {
+          fallbackToSpeechSynthesis(textToSpeak);
         };
-
-        window.speechSynthesis.speak(utterance);
-      };
-
-      if (window.speechSynthesis.getVoices().length === 0) {
-        window.speechSynthesis.onvoiceschanged = setVoiceAndSpeak;
-        // Warm up cho iOS
-        window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
-      } else {
-        setVoiceAndSpeak();
+        await audio.play();
+        return;
       }
-
-    } catch (err) {
-      console.error("Audio Playback Error:", err);
-    } finally {
-      setIsLoading(false);
+    } catch (e) {
+      console.warn("Gemini TTS failed, falling back to browser TTS:", e);
     }
+
+    // 2. Fallback sang trình duyệt (SpeechSynthesis)
+    fallbackToSpeechSynthesis(textToSpeak);
+  };
+
+  const fallbackToSpeechSynthesis = (textToSpeak: string) => {
+    if (!('speechSynthesis' in window)) {
+      setIsLoading(false);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = 'vi-VN';
+    utterance.rate = 0.9;
+
+    const voices = window.speechSynthesis.getVoices();
+    const viVoice = voices.find(v => v.lang.includes('vi') || v.lang.includes('VN'));
+    if (viVoice) utterance.voice = viVoice;
+
+    utterance.onend = () => setIsLoading(false);
+    utterance.onerror = () => setIsLoading(false);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const handlePlay = () => {
+    setIsLoading(true);
+
+    // 1. Ưu tiên giọng giáo viên nếu có
+    if (customAudioUrl) {
+      const audio = new Audio(customAudioUrl);
+      audio.onended = () => setIsLoading(false);
+      audio.onerror = () => {
+        const textToSpeak = Array.isArray(text) ? text.join(' ') : text;
+        speakText(textToSpeak);
+      };
+      audio.play().catch(err => {
+        console.error("Custom audio play failed:", err);
+        const textToSpeak = Array.isArray(text) ? text.join(' ') : text;
+        speakText(textToSpeak);
+      });
+      return;
+    }
+
+    // 2. Sử dụng AI Voice
+    const textToSpeak = Array.isArray(text) ? text.join(' ') : text;
+    speakText(textToSpeak);
   };
 
   const startRecording = async () => {
@@ -152,8 +180,8 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
         onClick={handlePlay}
         disabled={isLoading || isRecording}
         className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all disabled:opacity-50 ${hasCustomAudio
-            ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-200'
-            : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+          ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-200'
+          : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
           }`}
         title={hasCustomAudio ? "Nghe giọng giáo viên (Đã sửa)" : "Nghe giọng AI"}
       >

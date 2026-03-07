@@ -24,7 +24,12 @@ export const uploadAudioToCloud = async (recordingId: string, audioBlob: Blob, e
     if (!res.ok) {
       const errorData = await res.json();
       console.error("[Cloudinary Error]", errorData);
-      throw new Error(errorData.error?.message || "Upload failed");
+
+      const msg = errorData.error?.message || "Upload failed";
+      if (msg.includes("unsigned") || msg.includes("Upload preset")) {
+        throw new Error(`Lỗi: 'Upload Preset' ${UPLOAD_PRESET} chưa được cấu hình là 'Unsigned'. Hãy kiểm tra lại dashboard Cloudinary.`);
+      }
+      throw new Error(msg);
     }
 
     const data = await res.json();
