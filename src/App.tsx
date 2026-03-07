@@ -638,8 +638,62 @@ function LessonEditor({ lesson, onSave, onCancel }: { lesson: Lesson, onSave: (i
     content: lesson.content,
     passage: Array.isArray(lesson.passage) ? lesson.passage.join('\n') : (lesson.passage || ''),
     examples: lesson.examples.join(', '),
-    topic: lesson.topic || ''
+    topic: lesson.topic || '',
+    type: lesson.type,
+    book: lesson.book,
+    quiz: lesson.quiz ? JSON.parse(JSON.stringify(lesson.quiz)) : [],
+    exercise: lesson.exercise ? JSON.parse(JSON.stringify(lesson.exercise)) : { type: 'word-builder', data: { word: '', parts: [] } }
   });
+
+  const handleQuizChange = (index: number, field: string, value: any) => {
+    const newQuiz = [...formData.quiz];
+    newQuiz[index] = { ...newQuiz[index], [field]: value };
+    setFormData({ ...formData, quiz: newQuiz });
+  };
+
+  const handleOptionChange = (qIndex: number, oIndex: number, value: string) => {
+    const newQuiz = [...formData.quiz];
+    const newOptions = [...newQuiz[qIndex].options];
+    newOptions[oIndex] = value;
+    newQuiz[qIndex] = { ...newQuiz[qIndex], options: newOptions };
+    setFormData({ ...formData, quiz: newQuiz });
+  };
+
+  const addQuizQuestion = () => {
+    setFormData({
+      ...formData,
+      quiz: [...formData.quiz, { question: '', options: ['', '', ''], correctAnswer: 0 }]
+    });
+  };
+
+  const removeQuizQuestion = (index: number) => {
+    setFormData({
+      ...formData,
+      quiz: formData.quiz.filter((_, i: number) => i !== index)
+    });
+  };
+
+  const handleExerciseTypeChange = (type: string) => {
+    let defaultData = {};
+    if (type === 'word-builder') defaultData = { word: '', parts: [] };
+    else if (type === 'fill-blank') defaultData = { image: '', word: '', missing: '' };
+    else if (type === 'matching') defaultData = { pairs: [] };
+
+    setFormData({
+      ...formData,
+      exercise: { type: type as any, data: defaultData }
+    });
+  };
+
+  const handleExerciseDataChange = (field: string, value: any) => {
+    setFormData({
+      ...formData,
+      exercise: {
+        ...formData.exercise,
+        data: { ...formData.exercise.data, [field]: value }
+      }
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -648,7 +702,11 @@ function LessonEditor({ lesson, onSave, onCancel }: { lesson: Lesson, onSave: (i
       content: formData.content,
       passage: formData.passage.includes('\n') ? formData.passage.split('\n') : formData.passage,
       examples: formData.examples.split(',').map(s => s.trim()).filter(s => s !== ''),
-      topic: formData.topic
+      topic: formData.topic,
+      type: formData.type,
+      book: formData.book,
+      quiz: formData.quiz,
+      exercise: formData.exercise
     });
   };
 
@@ -659,70 +717,306 @@ function LessonEditor({ lesson, onSave, onCancel }: { lesson: Lesson, onSave: (i
         <button onClick={onCancel} className="p-2 hover:bg-slate-100 rounded-full text-slate-400">✕</button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Tiêu đề bài học</label>
-          <input
-            type="text"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold"
-          />
-        </div>
+      <form onSubmit={handleSubmit} className="space-y-12">
+        {/* Basic Info Section */}
+        <section className="space-y-6">
+          <h3 className="text-xl font-bold text-slate-700 pb-2 border-b border-slate-100 flex items-center gap-2">
+            <Layout size={20} className="text-emerald-500" /> Thông tin cơ bản
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Tiêu đề bài học</label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Chủ đề (Tùy chọn)</label>
+              <input
+                type="text"
+                value={formData.topic}
+                onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Loại bài học</label>
+              <select
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold"
+              >
+                <option value="vowel">Âm</option>
+                <option value="rhyme">Vần</option>
+                <option value="reading">Bài đọc</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Tập sách</label>
+              <select
+                value={formData.book}
+                onChange={(e) => setFormData({ ...formData, book: parseInt(e.target.value) as 1 | 2 })}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold"
+              >
+                <option value={1}>Tập 1</option>
+                <option value={2}>Tập 2</option>
+              </select>
+            </div>
+          </div>
 
-        <div>
-          <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Nội dung chính (Học âm/vần)</label>
-          <input
-            type="text"
-            value={formData.content}
-            onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none text-2xl font-black text-orange-600"
-          />
-        </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Âm/Vần chính</label>
+            <input
+              type="text"
+              value={formData.content}
+              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none text-2xl font-black text-orange-600"
+            />
+          </div>
 
-        <div>
-          <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Chủ đề (Tùy chọn)</label>
-          <input
-            type="text"
-            value={formData.topic}
-            onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none"
-          />
-        </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Các từ ví dụ (Phân tách bằng dấu phẩy)</label>
+            <input
+              type="text"
+              value={formData.examples}
+              onChange={(e) => setFormData({ ...formData, examples: e.target.value })}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none"
+              placeholder="Ví dụ: ba, bà, bá"
+            />
+          </div>
 
-        <div>
-          <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Từ ví dụ (Cắt nhau bằng dấu phẩy)</label>
-          <input
-            type="text"
-            value={formData.examples}
-            onChange={(e) => setFormData({ ...formData, examples: e.target.value })}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none"
-            placeholder="Ví dụ: ba, bà, bá"
-          />
-        </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Đoạn văn luyện đọc (Xuống dòng cho mỗi đoạn)</label>
+            <textarea
+              value={formData.passage}
+              onChange={(e) => setFormData({ ...formData, passage: e.target.value })}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none min-h-[120px] leading-relaxed"
+            />
+          </div>
+        </section>
 
-        <div>
-          <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Đoạn văn luyện đọc (Mỗi dòng một đoạn)</label>
-          <textarea
-            value={formData.passage}
-            onChange={(e) => setFormData({ ...formData, passage: e.target.value })}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none min-h-[200px]"
-          />
-        </div>
+        {/* Quiz Section */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <h3 className="text-xl font-bold text-slate-700 flex items-center gap-2">
+              <CheckCircle2 size={20} className="text-emerald-500" /> Trắc nghiệm ({formData.quiz.length})
+            </h3>
+            <button
+              type="button"
+              onClick={addQuizQuestion}
+              className="text-sm font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-3 py-1.5 rounded-xl transition-colors"
+            >
+              <Plus size={16} /> Thêm câu hỏi
+            </button>
+          </div>
 
-        <div className="pt-6 flex gap-3">
+          <div className="space-y-6">
+            {formData.quiz.map((q: any, qIndex: number) => (
+              <div key={qIndex} className="p-6 bg-slate-50 rounded-3xl border border-slate-100 relative group/q">
+                <button
+                  type="button"
+                  onClick={() => removeQuizQuestion(qIndex)}
+                  className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                >
+                  <Trash2 size={18} />
+                </button>
+                <div className="mb-4">
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Câu hỏi {qIndex + 1}</label>
+                  <input
+                    type="text"
+                    value={q.question}
+                    onChange={(e) => handleQuizChange(qIndex, 'question', e.target.value)}
+                    className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {q.options.map((opt: string, oIndex: number) => (
+                    <div key={oIndex} className="relative">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Lựa chọn {oIndex + 1}</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={opt}
+                          onChange={(e) => handleOptionChange(qIndex, oIndex, e.target.value)}
+                          className={cn("flex-1 px-3 py-2 bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm",
+                            q.correctAnswer === oIndex ? "border-emerald-500 ring-1 ring-emerald-500" : "border-slate-200")}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleQuizChange(qIndex, 'correctAnswer', oIndex)}
+                          className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                            q.correctAnswer === oIndex ? "bg-emerald-500 text-white" : "bg-white border border-slate-200 text-slate-300 hover:border-emerald-200")}
+                        >
+                          <Check size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {formData.quiz.length === 0 && (
+              <p className="text-center py-8 text-slate-400 italic bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                Chưa có câu hỏi trắc nghiệm nào
+              </p>
+            )}
+          </div>
+        </section>
+
+        {/* Exercise Section */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <h3 className="text-xl font-bold text-slate-700 flex items-center gap-2">
+              <Sparkles size={20} className="text-emerald-500" /> Bài tập nhỏ
+            </h3>
+            <select
+              value={formData.exercise.type}
+              onChange={(e) => handleExerciseTypeChange(e.target.value)}
+              className="text-sm font-bold bg-white border border-slate-200 rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-emerald-500 outline-none"
+            >
+              <option value="word-builder">Sắp xếp chữ (Word Builder)</option>
+              <option value="fill-blank">Điền từ còn thiếu (Fill Blank)</option>
+              <option value="matching">Nối từ (Matching)</option>
+            </select>
+          </div>
+
+          <div className="p-6 bg-emerald-50/30 rounded-3xl border border-emerald-100">
+            {formData.exercise.type === 'word-builder' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-emerald-700 uppercase mb-2">Từ khóa chính</label>
+                  <input
+                    type="text"
+                    value={formData.exercise.data.word}
+                    onChange={(e) => handleExerciseDataChange('word', e.target.value)}
+                    className="w-full px-4 py-2 bg-white border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                    placeholder="Ví dụ: bế bé"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-emerald-700 uppercase mb-2">Các phần tách rời (Phân tách bằng dấu phẩy)</label>
+                  <input
+                    type="text"
+                    value={Array.isArray(formData.exercise.data.parts) ? formData.exercise.data.parts.join(', ') : ''}
+                    onChange={(e) => handleExerciseDataChange('parts', e.target.value.split(',').map(s => s.trim()))}
+                    className="w-full px-4 py-2 bg-white border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                    placeholder="Ví dụ: bế, bé"
+                  />
+                </div>
+              </div>
+            )}
+
+            {formData.exercise.type === 'fill-blank' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-emerald-700 uppercase mb-2">URL Hình ảnh</label>
+                  <input
+                    type="text"
+                    value={formData.exercise.data.image}
+                    onChange={(e) => handleExerciseDataChange('image', e.target.value)}
+                    className="w-full px-4 py-2 bg-white border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                    placeholder="https://..."
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-emerald-700 uppercase mb-2">Từ hiển thị (Dùng _ cho chỗ trống)</label>
+                    <input
+                      type="text"
+                      value={formData.exercise.data.word}
+                      onChange={(e) => handleExerciseDataChange('word', e.target.value)}
+                      className="w-full px-4 py-2 bg-white border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold"
+                      placeholder="b_"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-emerald-700 uppercase mb-2">Ký tự còn thiếu</label>
+                    <input
+                      type="text"
+                      value={formData.exercise.data.missing}
+                      onChange={(e) => handleExerciseDataChange('missing', e.target.value)}
+                      className="w-full px-4 py-2 bg-white border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold"
+                      placeholder="o"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {formData.exercise.type === 'matching' && (
+              <div className="space-y-4">
+                <label className="block text-xs font-bold text-emerald-700 uppercase mb-2">Các cặp từ nối (Trái - Phải)</label>
+                <div className="space-y-2">
+                  {(formData.exercise.data.pairs || []).map((pair: any, pIndex: number) => (
+                    <div key={pIndex} className="flex gap-2 items-center">
+                      <input
+                        type="text"
+                        value={pair.left}
+                        onChange={(e) => {
+                          const newPairs = [...formData.exercise.data.pairs];
+                          newPairs[pIndex] = { ...newPairs[pIndex], left: e.target.value };
+                          handleExerciseDataChange('pairs', newPairs);
+                        }}
+                        className="flex-1 px-3 py-2 bg-white border border-emerald-100 rounded-xl text-sm"
+                        placeholder="Trái"
+                      />
+                      <span className="text-emerald-300">↔</span>
+                      <input
+                        type="text"
+                        value={pair.right}
+                        onChange={(e) => {
+                          const newPairs = [...formData.exercise.data.pairs];
+                          newPairs[pIndex] = { ...newPairs[pIndex], right: e.target.value };
+                          handleExerciseDataChange('pairs', newPairs);
+                        }}
+                        className="flex-1 px-3 py-2 bg-white border border-emerald-100 rounded-xl text-sm"
+                        placeholder="Phải"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newPairs = formData.exercise.data.pairs.filter((_: any, i: number) => i !== pIndex);
+                          handleExerciseDataChange('pairs', newPairs);
+                        }}
+                        className="p-2 text-slate-300 hover:text-red-500"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newPairs = [...(formData.exercise.data.pairs || []), { left: '', right: '' }];
+                    handleExerciseDataChange('pairs', newPairs);
+                  }}
+                  className="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1"
+                >
+                  <Plus size={14} /> Thêm cặp từ
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Save/Cancel Buttons */}
+        <div className="pt-8 border-t border-slate-100 flex gap-4">
           <button
             type="submit"
-            className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-700 flex items-center justify-center gap-2"
+            className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-700 flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
           >
             <Save size={20} /> Lưu thay đổi
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200"
+            className="px-10 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-colors"
           >
-            Hủy
+            Hủy bỏ
           </button>
         </div>
       </form>
