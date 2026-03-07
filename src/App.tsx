@@ -29,7 +29,7 @@ export default function App() {
   const [lessons, setLessons] = useState<Lesson[]>(staticLessons);
   const [isLoadingLessons, setIsLoadingLessons] = useState(true);
   const [aiFeedback, setAiFeedback] = useState<{ transcription: string; feedback: string; accuracy: number } | null>(null);
-  const { progress, completeLesson, setUsername, users, currentUserId, addUser, switchUser, deleteUser, addBulkUsers, classes, addClass, resetToDefault, login, logout } = useProgress();
+  const { progress, completeLesson, setUsername, users, currentUserId, addUser, switchUser, deleteUser, addBulkUsers, classes, addClass, resetToDefault, login, register, logout } = useProgress();
   const [showSettings, setShowSettings] = useState(false);
   const [newUsername, setNewUsername] = useState(progress.username);
   const [isAddingUser, setIsAddingUser] = useState(false);
