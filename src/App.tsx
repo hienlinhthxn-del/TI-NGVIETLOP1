@@ -392,7 +392,7 @@ export default function App() {
             ) : <TeacherDashboard progress={progress} users={users} addBulkUsers={addBulkUsers} classes={classes} onAddClass={addClass} onReset={resetToDefault} lessons={lessons} />}
           </>
         )}
-        {role === 'parent' && <ParentDashboard users={users} classes={classes} lessons={lessons} />}
+        {role === 'parent' && <ParentDashboard users={users} classes={classes} lessons={lessons} currentUserId={currentUserId} />}
       </main>
     </div>
   );
@@ -1415,7 +1415,7 @@ function TeacherDashboard({ progress, users, addBulkUsers, classes, onAddClass, 
   );
 }
 
-function ParentDashboard({ users, classes, lessons }: { users: UserProfile[], classes: ClassGroup[], lessons: Lesson[] }) {
+function ParentDashboard({ users, classes, lessons, currentUserId }: { users: UserProfile[], classes: ClassGroup[], lessons: Lesson[], currentUserId: string }) {
   const { assignments } = useAssignments();
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
@@ -1423,11 +1423,15 @@ function ParentDashboard({ users, classes, lessons }: { users: UserProfile[], cl
   // Hiện tại ta giả định phụ huynh xem các học sinh trong cùng lớp (hoặc có logic liên kết riêng)
   // Đơn giản nhất: Lấy học sinh đầu tiên trong danh sách nếu chưa chọn
   useEffect(() => {
-    if (!selectedStudentId && users.length > 0) {
-      const firstStudent = users.find(u => u.role === 'student' || !u.role);
-      if (firstStudent) setSelectedStudentId(firstStudent.id);
+    if (!selectedStudentId) {
+      if (currentUserId && currentUserId !== 'default' && users.some(u => u.id === currentUserId)) {
+        setSelectedStudentId(currentUserId);
+      } else if (users.length > 0) {
+        const firstStudent = users.find(u => u.role === 'student' || !u.role);
+        if (firstStudent) setSelectedStudentId(firstStudent.id);
+      }
     }
-  }, [users, selectedStudentId]);
+  }, [users, selectedStudentId, currentUserId]);
 
   // Tải tiến độ của học sinh được chọn
   const [studentProgress, setStudentProgress] = useState<ProgressData | null>(null);

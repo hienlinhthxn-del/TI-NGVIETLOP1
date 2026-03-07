@@ -23,7 +23,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, loginService })
     const [students, setStudents] = useState<any[]>([]);
 
     useEffect(() => {
-        if (role === 'student') {
+        if (role === 'student' || role === 'parent') {
             fetchStudents();
         }
     }, [role]);
@@ -91,7 +91,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, loginService })
                         title="Phụ Huynh"
                         desc="Theo dõi con học"
                         color="orange"
-                        onClick={() => { setRole('parent'); setStep('login'); }}
+                        onClick={() => { setRole('parent'); setStep('select-student'); }}
                     />
                 </div>
             </div>
@@ -121,7 +121,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, loginService })
                         {role === 'student' ? 'Chào con yêu!' : role === 'teacher' ? 'Đăng nhập Giáo viên' : 'Đăng nhập Phụ huynh'}
                     </h2>
                     <p className="text-slate-400 font-medium text-center mt-2">
-                        {role === 'student' ? 'Hãy chọn tên của mình để bắt đầu học nhé' : 'Vui lòng nhập tài khoản để tiếp tục'}
+                        {role === 'student' ? 'Hãy chọn tên của mình để bắt đầu học nhé' : role === 'parent' ? 'Ba mẹ chọn tên con để xem tiến độ nhé' : 'Vui lòng nhập tài khoản để tiếp tục'}
                     </p>
                 </div>
 
@@ -140,20 +140,24 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, loginService })
                             <button
                                 key={s.id}
                                 onClick={() => { setUsername(s.username); handleLogin(undefined, s.username); }}
-                                className="w-full p-4 rounded-2xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50 transition-all flex items-center justify-between group"
+                                className={cn("w-full p-4 rounded-2xl border border-slate-100 transition-all flex items-center justify-between group",
+                                    role === 'student' ? "hover:border-blue-300 hover:bg-blue-50" : "hover:border-orange-300 hover:bg-orange-50")}
                                 disabled={loading}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">
+                                    <div className={cn("w-10 h-10 rounded-full flex items-center justify-center font-bold",
+                                        role === 'student' ? "bg-blue-100 text-blue-600" : "bg-orange-100 text-orange-600")}>
                                         {(s.fullName || s.username || "H")[0].toUpperCase()}
                                     </div>
                                     <span className="font-bold text-slate-700">{s.fullName || s.username}</span>
                                 </div>
-                                <Check size={18} className="text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <Check size={18} className={cn("opacity-0 group-hover:opacity-100 transition-opacity", role === 'student' ? "text-blue-500" : "text-orange-500")} />
                             </button>
                         ))}
                         <div className="pt-4 border-t border-slate-50 mt-4">
-                            <p className="text-[10px] text-slate-400 text-center italic">Nếu không thấy tên mình, em hãy nhờ cô giáo thêm em vào lớp nhé!</p>
+                            <p className="text-[10px] text-slate-400 text-center italic">
+                                {role === 'student' ? "Nếu không thấy tên mình, em hãy nhờ cô giáo thêm em vào lớp nhé!" : "Nếu không thấy tên con, ba mẹ hãy nhờ cô giáo thêm con vào lớp nhé!"}
+                            </p>
                         </div>
                     </div>
                 ) : (
