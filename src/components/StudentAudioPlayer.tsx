@@ -25,9 +25,11 @@ export function StudentAudioPlayer({ recordingId }: StudentAudioPlayerProps) {
       setIsLoading(false);
     };
 
-    audio.onerror = () => {
-      console.error(`Error loading audio from /api/audio/${recordingId}`);
-      alert("Không thể tải bài đọc. Có thể file đang được xử lý hoặc lỗi kết nối.");
+    audio.onerror = (e) => {
+      console.error(`Error loading audio from /api/audio/${recordingId}:`, e);
+      // Hiển thị chi tiết lỗi nếu có thể
+      const errorMsg = audio.error ? ` (Mã lỗi: ${audio.error.code})` : "";
+      alert(`Không thể tải bài đọc${errorMsg}. Có thể file đang được xử lý trên máy chủ hoặc do kết nối mạng yếu. Con hãy thử lại sau giây lát nhé!`);
       setIsLoading(false);
     };
 

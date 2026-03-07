@@ -1,6 +1,7 @@
-// Lấy cấu hình từ biến môi trường
-const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "dcc69wfln";
-const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_PRESET || "ml_default";
+// @ts-ignore
+const env = import.meta.env || {};
+const CLOUD_NAME = env.VITE_CLOUDINARY_CLOUD_NAME || "dx8v9vuxo";
+const UPLOAD_PRESET = env.VITE_CLOUDINARY_PRESET || "ml_default";
 
 /**
  * Upload audio blob lên Cloudinary
