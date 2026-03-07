@@ -5,7 +5,7 @@ export interface QuizQuestion {
 }
 
 export interface InteractiveExercise {
-  type: 'word-builder' | 'fill-blank' | 'image-match';
+  type: 'word-builder' | 'fill-blank' | 'image-match' | 'matching';
   data: any;
 }
 
@@ -24,13 +24,13 @@ export interface Lesson {
 
 export const lessons: Lesson[] = [
   // TẬP 1: 83 BÀI
-  { 
-    id: '1', 
-    title: 'Bài 1 đến bài 3: a, b, c', 
-    type: 'vowel', 
-    content: 'a, b, c', 
-    passage: ['ba, bà, bá, ca, cá, cà', 'bà ba, ba bà, ca ba, ba ba', '- A, ba ba!'], 
-    examples: ['ba', 'bà', 'bá', 'ca', 'cá', 'cà', 'bà ba', 'ba bà', 'ca ba', 'ba ba'], 
+  {
+    id: '1',
+    title: 'Bài 1 đến bài 3: a, b, c',
+    type: 'vowel',
+    content: 'a, b, c',
+    passage: ['ba, bà, bá, ca, cá, cà', 'bà ba, ba bà, ca ba, ba ba', '- A, ba ba!'],
+    examples: ['ba', 'bà', 'bá', 'ca', 'cá', 'cà', 'bà ba', 'ba bà', 'ca ba', 'ba ba'],
     book: 1,
     exercise: {
       type: 'matching',
@@ -47,14 +47,14 @@ export const lessons: Lesson[] = [
       { question: 'Tiếng nào có âm b?', options: ['ca', 'bà', 'cà'], correctAnswer: 1 }
     ]
   },
-  { 
-    id: '4', 
-    title: 'Bài 4: e, ê', 
-    type: 'vowel', 
-    content: 'e, ê', 
-    passage: ['bé, bè, bê, bế', 'be bé, bề bề, bế bé, bè bè', '- Cá be bé.', '- Bà bế bé'], 
-    examples: ['bé', 'bè', 'bê', 'bế', 'be bé', 'bề bề', 'bế bé', 'bè bè'], 
-    book: 1, 
+  {
+    id: '4',
+    title: 'Bài 4: e, ê',
+    type: 'vowel',
+    content: 'e, ê',
+    passage: ['bé, bè, bê, bế', 'be bé, bề bề, bế bé, bè bè', '- Cá be bé.', '- Bà bế bé'],
+    examples: ['bé', 'bè', 'bê', 'bế', 'be bé', 'bề bề', 'bế bé', 'bè bè'],
+    book: 1,
     exercise: { type: 'word-builder', data: { word: 'bế bé', parts: ['bế', ' ', 'bé'] } },
     quiz: [
       { question: 'Tiếng nào có âm e?', options: ['bè', 'ba', 'bô'], correctAnswer: 0 },
@@ -62,28 +62,30 @@ export const lessons: Lesson[] = [
     ]
   },
   { id: '5', title: 'Bài 5: Ôn tập', type: 'reading', content: 'Ôn tập', passage: ['ba bé, bà bè, bè cá', '- Bè be bé.', '- Bé bê ca.'], examples: ['ba bé', 'bà bè', 'bè cá'], book: 1 },
-  { 
-    id: '6', 
-    title: 'Bài 6, Bài 7: o, ô, ?, .', 
-    type: 'vowel', 
-    content: 'o, ô, ?, .', 
-    passage: ['cô, cố, cò, bố, bò, bổ, bộ', 'bó cỏ, cổ cò, bò bê', '- Cô có cá, có cả cà', '- Bà bế bé, cô Ba bó cỏ.'], 
-    examples: ['cô', 'cố', 'cò', 'bố', 'bò', 'bổ', 'bộ', 'bó cỏ', 'cổ cò', 'bò bê'], 
-    book: 1, 
+  {
+    id: '6',
+    title: 'Bài 6, Bài 7: o, ô, ?, .',
+    type: 'vowel',
+    content: 'o, ô, ?, .',
+    passage: ['cô, cố, cò, bố, bò, bổ, bộ', 'bó cỏ, cổ cò, bò bê', '- Cô có cá, có cả cà', '- Bà bế bé, cô Ba bó cỏ.'],
+    examples: ['cô', 'cố', 'cò', 'bố', 'bò', 'bổ', 'bộ', 'bó cỏ', 'cổ cò', 'bò bê'],
+    book: 1,
     exercise: { type: 'fill-blank', data: { image: 'https://img.freepik.com/free-vector/cute-cow-cartoon-character_1308-135667.jpg', word: 'b_', missing: 'o' } },
     quiz: [
       { question: 'Tiếng nào có âm ô?', options: ['cò', 'cô', 'ca'], correctAnswer: 1 },
       { question: 'Dấu hỏi là dấu gì?', options: ['?', '.', '~'], correctAnswer: 0 }
     ]
   },
-  { id: '8', title: 'Bài 8: d, đ', type: 'vowel', content: 'd, đ', passage: ['da, dạ, dế, đa, đá, đỏ, đò, đố', 'ca đá, đa đa, da dẻ, da cá', '- Cô có ca đá. - Bố đố bé'], examples: ['da', 'dạ', 'dế', 'đa', 'đá', 'đỏ', 'đò', 'đố', 'ca đá', 'đa đa', 'da dẻ', 'da cá'], book: 1,
+  {
+    id: '8', title: 'Bài 8: d, đ', type: 'vowel', content: 'd, đ', passage: ['da, dạ, dế, đa, đá, đỏ, đò, đố', 'ca đá, đa đa, da dẻ, da cá', '- Cô có ca đá. - Bố đố bé'], examples: ['da', 'dạ', 'dế', 'đa', 'đá', 'đỏ', 'đò', 'đố', 'ca đá', 'đa đa', 'da dẻ', 'da cá'], book: 1,
     exercise: { type: 'word-builder', data: { word: 'da dẻ', parts: ['da', ' ', 'dẻ'] } },
     quiz: [
       { question: 'Tiếng nào có âm d?', options: ['đa', 'da', 'ca'], correctAnswer: 1 },
       { question: 'Tiếng nào có âm đ?', options: ['dế', 'đá', 'bê'], correctAnswer: 1 }
     ]
   },
-  { id: '9', title: 'Bài 9: ơ, dấu ngã', type: 'vowel', content: 'ơ, ~', passage: ['cờ, bơ, đỡ, cỡ, dỡ, cỗ, đỗ, bờ', 'bờ cỏ, cờ đỏ, cá cờ', '- Bé có cờ đỏ. - Bò, bê ở bờ đê.'], examples: ['cờ', 'bơ', 'đỡ', 'cỡ', 'dỡ', 'cỗ', 'đỗ', 'bờ', 'bờ cỏ', 'cờ đỏ', 'cá cờ'], book: 1,
+  {
+    id: '9', title: 'Bài 9: ơ, dấu ngã', type: 'vowel', content: 'ơ, ~', passage: ['cờ, bơ, đỡ, cỡ, dỡ, cỗ, đỗ, bờ', 'bờ cỏ, cờ đỏ, cá cờ', '- Bé có cờ đỏ. - Bò, bê ở bờ đê.'], examples: ['cờ', 'bơ', 'đỡ', 'cỡ', 'dỡ', 'cỗ', 'đỗ', 'bờ', 'bờ cỏ', 'cờ đỏ', 'cá cờ'], book: 1,
     exercise: { type: 'fill-blank', data: { image: 'https://placehold.co/400x300?text=Co+Do', word: 'cờ đ_', missing: 'ỏ' } },
     quiz: [
       { question: 'Tiếng nào có âm ơ?', options: ['cờ', 'ca', 'cô'], correctAnswer: 0 },
@@ -91,28 +93,32 @@ export const lessons: Lesson[] = [
     ]
   },
   { id: '10', title: 'Bài 10: Ôn tập', type: 'reading', content: 'Ôn tập', passage: ['Ô đỏ, đo đỏ, đỗ đỏ, dỗ bé.', '- Ở bờ đê có dế.', '- Bé có bộ đồ đỏ, ô đỏ.'], examples: ['Ô đỏ', 'đo đỏ', 'đỗ đỏ', 'dỗ bé'], book: 1 },
-  { id: '11', title: 'Bài 11: i, k', type: 'vowel', content: 'i, k', passage: ['bi, bí, kè, kẽ, kí, kể, đi, dì', 'đi đò, đá kì, bi bô, ê ke, kì cọ', '- Bé đi bộ ở bờ đê.', '- Bố kê bể cá ở kệ.'], examples: ['bi', 'bí', 'kè', 'kẽ', 'kí', 'kể', 'đi', 'dì', 'đi đò', 'đá kì', 'bi bô', 'ê ke', 'kì cọ', 'đi bộ', 'kì đà', 'kề cà'], book: 1,
+  {
+    id: '11', title: 'Bài 11: i, k', type: 'vowel', content: 'i, k', passage: ['bi, bí, kè, kẽ, kí, kể, đi, dì', 'đi đò, đá kì, bi bô, ê ke, kì cọ', '- Bé đi bộ ở bờ đê.', '- Bố kê bể cá ở kệ.'], examples: ['bi', 'bí', 'kè', 'kẽ', 'kí', 'kể', 'đi', 'dì', 'đi đò', 'đá kì', 'bi bô', 'ê ke', 'kì cọ', 'đi bộ', 'kì đà', 'kề cà'], book: 1,
     exercise: { type: 'matching', data: { pairs: [{ left: 'bi', right: 've' }, { left: 'kì', right: 'đà' }, { left: 'đi', right: 'bộ' }] } },
     quiz: [
       { question: 'Tiếng nào có âm i?', options: ['kê', 'bi', 'ca'], correctAnswer: 1 },
       { question: 'Tiếng nào có âm k?', options: ['kẻ', 'bê', 'cà'], correctAnswer: 0 }
     ]
   },
-  { id: '12', title: 'Bài 12: h, l', type: 'vowel', content: 'h, l', passage: ['hè, hề, lề, lè, hồ, lá, lò, hà', 'lọ hồ, lá cọ, lễ độ, kì lạ, hồ cá', '- Bé có ba lô.', '- Bà có lá hẹ.', '- Bé bị ho, bà bế bé.'], examples: ['hè', 'hề', 'lề', 'lè', 'hồ', 'lá', 'lò', 'hà', 'lọ hồ', 'lá cọ', 'lễ độ', 'kì lạ', 'hồ cá', 'ba lô', 'bó hẹ', 'lề hè'], book: 1,
+  {
+    id: '12', title: 'Bài 12: h, l', type: 'vowel', content: 'h, l', passage: ['hè, hề, lề, lè, hồ, lá, lò, hà', 'lọ hồ, lá cọ, lễ độ, kì lạ, hồ cá', '- Bé có ba lô.', '- Bà có lá hẹ.', '- Bé bị ho, bà bế bé.'], examples: ['hè', 'hề', 'lề', 'lè', 'hồ', 'lá', 'lò', 'hà', 'lọ hồ', 'lá cọ', 'lễ độ', 'kì lạ', 'hồ cá', 'ba lô', 'bó hẹ', 'lề hè'], book: 1,
     exercise: { type: 'word-builder', data: { word: 'ba lô', parts: ['ba', ' ', 'lô'] } },
     quiz: [
       { question: 'Tiếng nào có âm h?', options: ['lê', 'hè', 'ba'], correctAnswer: 1 },
       { question: 'Tiếng nào có âm l?', options: ['hồ', 'ca', 'lê'], correctAnswer: 2 }
     ]
   },
-  { id: '13', title: 'Bài 13: u, ư', type: 'vowel', content: 'u, ư', passage: ['cụ, dù, đủ, dữ, cũ, lũ, cử, bự', 'đu đủ, cá dữ, cũ kĩ, bé bự, cù kì', '- Bố bổ đu đủ.', '- Ô bà đã cũ.'], examples: ['cụ', 'dù', 'đủ', 'dữ', 'cũ', 'lũ', 'cử', 'bự', 'đu đủ', 'cá dữ', 'cũ kĩ', 'bé bự', 'cù kì', 'cự li', 'bà cụ', 'ô dù'], book: 1,
+  {
+    id: '13', title: 'Bài 13: u, ư', type: 'vowel', content: 'u, ư', passage: ['cụ, dù, đủ, dữ, cũ, lũ, cử, bự', 'đu đủ, cá dữ, cũ kĩ, bé bự, cù kì', '- Bố bổ đu đủ.', '- Ô bà đã cũ.'], examples: ['cụ', 'dù', 'đủ', 'dữ', 'cũ', 'lũ', 'cử', 'bự', 'đu đủ', 'cá dữ', 'cũ kĩ', 'bé bự', 'cù kì', 'cự li', 'bà cụ', 'ô dù'], book: 1,
     exercise: { type: 'fill-blank', data: { image: 'https://placehold.co/400x300?text=Du+Du', word: 'đu đ_', missing: 'ủ' } },
     quiz: [
       { question: 'Tiếng nào có âm u?', options: ['cư', 'cụ', 'ca'], correctAnswer: 1 },
       { question: 'Tiếng nào có âm ư?', options: ['du', 'dư', 'đa'], correctAnswer: 1 }
     ]
   },
-  { id: '14', title: 'Bài 14: ch, kh', type: 'vowel', content: 'ch, kh', passage: ['chú, khá, chị, chữ, khó, chè, khỉ, khô', 'chữ kí, cá kho, chả cá, khe đá, lá khô', '- Bé đi khe khẽ.', '- Kì đà bò ở khe đá.'], examples: ['chú', 'khá', 'chị', 'chữ', 'khó', 'chè', 'khỉ', 'khô', 'chữ kí', 'cá kho', 'chả cá', 'khe đá', 'lá khô', 'chè kho', 'khe khẽ', 'chú khỉ'], book: 1,
+  {
+    id: '14', title: 'Bài 14: ch, kh', type: 'vowel', content: 'ch, kh', passage: ['chú, khá, chị, chữ, khó, chè, khỉ, khô', 'chữ kí, cá kho, chả cá, khe đá, lá khô', '- Bé đi khe khẽ.', '- Kì đà bò ở khe đá.'], examples: ['chú', 'khá', 'chị', 'chữ', 'khó', 'chè', 'khỉ', 'khô', 'chữ kí', 'cá kho', 'chả cá', 'khe đá', 'lá khô', 'chè kho', 'khe khẽ', 'chú khỉ'], book: 1,
     exercise: { type: 'matching', data: { pairs: [{ left: 'chú', right: 'khỉ' }, { left: 'lá', right: 'khô' }, { left: 'cá', right: 'kho' }] } },
     quiz: [
       { question: 'Tiếng nào có âm ch?', options: ['khỉ', 'chị', 'ca'], correctAnswer: 1 },
@@ -120,28 +126,32 @@ export const lessons: Lesson[] = [
     ]
   },
   { id: '15', title: 'Bài 15: Ôn tập', type: 'reading', content: 'Ôn tập', passage: ['kè đá, bó kê, chà là, chú hề, kì cọ', '- Hà kẻ ô li.', '- Dì Lê đi chợ.', '- Bà có chè kho.', '- Bố chở bé đi Bờ Hồ.', '- Bé bị ho, bà bế bé.'], examples: ['kè đá', 'bó kê', 'chà là', 'chú hề', 'kì cọ', 'bò kho', 'chở đò', 'ô li'], book: 1 },
-  { id: '16', title: 'Bài 16: m, n', type: 'vowel', content: 'm, n', passage: ['mẹ, no, mè, mà, na, mơ, mỡ, nơ', 'lọ mỡ, no nê, lá mơ, cá mè, nơ đỏ', '- Bé Chi có mũ nỉ đỏ.', '- Dì đi đò, bố mẹ đi ca nô.'], examples: ['mẹ', 'no', 'mè', 'mà', 'na', 'mơ', 'mỡ', 'nơ', 'lọ mỡ', 'no nê', 'lá mơ', 'cá mè', 'nơ đỏ', 'bó mạ', 'lề mề', 'ca nô'], book: 1,
+  {
+    id: '16', title: 'Bài 16: m, n', type: 'vowel', content: 'm, n', passage: ['mẹ, no, mè, mà, na, mơ, mỡ, nơ', 'lọ mỡ, no nê, lá mơ, cá mè, nơ đỏ', '- Bé Chi có mũ nỉ đỏ.', '- Dì đi đò, bố mẹ đi ca nô.'], examples: ['mẹ', 'no', 'mè', 'mà', 'na', 'mơ', 'mỡ', 'nơ', 'lọ mỡ', 'no nê', 'lá mơ', 'cá mè', 'nơ đỏ', 'bó mạ', 'lề mề', 'ca nô'], book: 1,
     exercise: { type: 'word-builder', data: { word: 'ca nô', parts: ['ca', ' ', 'nô'] } },
     quiz: [
       { question: 'Tiếng nào có âm m?', options: ['nơ', 'mơ', 'la'], correctAnswer: 1 },
       { question: 'Tiếng nào có âm n?', options: ['mẹ', 'na', 'ba'], correctAnswer: 1 }
     ]
   },
-  { id: '17', title: 'Bài 17: g, gi', type: 'vowel', content: 'g, gi', passage: ['ga, gió, gà, giá, gỗ, giỏ, gia, già', 'gà mẹ, giò chả, giá đỗ, gia vị, gỗ gụ', '- Dì Na ủ giá đỗ.', '- Mẹ gỡ cá cho bé.'], examples: ['ga', 'gió', 'gà', 'giá', 'gỗ', 'giỏ', 'gia', 'già', 'gà mẹ', 'giò chả', 'giá đỗ', 'gia vị', 'gỗ gụ', 'dự giờ', 'gõ mõ', 'giỏ cá'], book: 1,
+  {
+    id: '17', title: 'Bài 17: g, gi', type: 'vowel', content: 'g, gi', passage: ['ga, gió, gà, giá, gỗ, giỏ, gia, già', 'gà mẹ, giò chả, giá đỗ, gia vị, gỗ gụ', '- Dì Na ủ giá đỗ.', '- Mẹ gỡ cá cho bé.'], examples: ['ga', 'gió', 'gà', 'giá', 'gỗ', 'giỏ', 'gia', 'già', 'gà mẹ', 'giò chả', 'giá đỗ', 'gia vị', 'gỗ gụ', 'dự giờ', 'gõ mõ', 'giỏ cá'], book: 1,
     exercise: { type: 'fill-blank', data: { image: 'https://placehold.co/400x300?text=Ga', word: 'con g_', missing: 'à' } },
     quiz: [
       { question: 'Tiếng nào có âm g?', options: ['gió', 'gà', 'da'], correctAnswer: 1 },
       { question: 'Tiếng nào có âm gi?', options: ['ga', 'giỏ', 'ca'], correctAnswer: 1 }
     ]
   },
-  { id: '18', title: 'Bài 18: gh, nh', type: 'vowel', content: 'gh, nh', passage: ['ghế, nho, nhớ, ghi, nhẹ, ghé, nhỉ, ghẹ', 'ghè đá, nhà cổ, gồ ghề, nhỏ nhẹ, ghi nhớ', '- Bé bê ghế cho mẹ.', '- Bà cho bé nho khô.'], examples: ['ghế', 'nho', 'nhớ', 'ghi', 'nhẹ', 'ghé', 'nhỉ', 'ghẹ', 'ghè đá', 'nhà cổ', 'gồ ghề', 'nhỏ nhẹ', 'ghi nhớ', 'nhỏ bé', 'ghế gỗ', 'nho khô'], book: 1,
+  {
+    id: '18', title: 'Bài 18: gh, nh', type: 'vowel', content: 'gh, nh', passage: ['ghế, nho, nhớ, ghi, nhẹ, ghé, nhỉ, ghẹ', 'ghè đá, nhà cổ, gồ ghề, nhỏ nhẹ, ghi nhớ', '- Bé bê ghế cho mẹ.', '- Bà cho bé nho khô.'], examples: ['ghế', 'nho', 'nhớ', 'ghi', 'nhẹ', 'ghé', 'nhỉ', 'ghẹ', 'ghè đá', 'nhà cổ', 'gồ ghề', 'nhỏ nhẹ', 'ghi nhớ', 'nhỏ bé', 'ghế gỗ', 'nho khô'], book: 1,
     exercise: { type: 'matching', data: { pairs: [{ left: 'ghế', right: 'gỗ' }, { left: 'nho', right: 'khô' }, { left: 'nhà', right: 'cổ' }] } },
     quiz: [
       { question: 'Tiếng nào có âm gh?', options: ['gà', 'ghế', 'ngà'], correctAnswer: 1 },
       { question: 'Tiếng nào có âm nh?', options: ['nho', 'mo', 'lo'], correctAnswer: 0 }
     ]
   },
-  { id: '19', title: 'Bài 19: ng, ngh', type: 'vowel', content: 'ng, ngh', passage: ['nga, nghệ, ngã, nghỉ, ngô, nghe, ngủ', 'lá ngô, củ nghệ, nghỉ lễ, ngã ba, nghỉ hè', '- Nhà bà ở ngõ nhỏ.', '- Nghỉ lễ nhà Nga đi hồ Ba Bể.'], examples: ['nga', 'nghệ', 'ngã', 'nghỉ', 'ngô', 'nghe', 'ngủ', 'lá ngô', 'củ nghệ', 'nghỉ lễ', 'ngã ba', 'nghỉ hè', 'cá ngừ', 'ngô nghê', 'đề nghị'], book: 1,
+  {
+    id: '19', title: 'Bài 19: ng, ngh', type: 'vowel', content: 'ng, ngh', passage: ['nga, nghệ, ngã, nghỉ, ngô, nghe, ngủ', 'lá ngô, củ nghệ, nghỉ lễ, ngã ba, nghỉ hè', '- Nhà bà ở ngõ nhỏ.', '- Nghỉ lễ nhà Nga đi hồ Ba Bể.'], examples: ['nga', 'nghệ', 'ngã', 'nghỉ', 'ngô', 'nghe', 'ngủ', 'lá ngô', 'củ nghệ', 'nghỉ lễ', 'ngã ba', 'nghỉ hè', 'cá ngừ', 'ngô nghê', 'đề nghị'], book: 1,
     exercise: { type: 'word-builder', data: { word: 'nghỉ hè', parts: ['nghỉ', ' ', 'hè'] } },
     quiz: [
       { question: 'Tiếng nào có âm ng?', options: ['nghe', 'ngô', 'nghỉ'], correctAnswer: 1 },
@@ -149,14 +159,16 @@ export const lessons: Lesson[] = [
     ]
   },
   { id: '20', title: 'Bài 20: Ôn tập', type: 'reading', content: 'Ôn tập', passage: ['nhà ga, ngõ nhỏ, giá đỡ, nhổ cỏ, bố mẹ', '- Nhà Hà ở chợ Mơ.', '- Bố chở bà đi nhà ga.', '- Ngõ nhà bà nho nhỏ.'], examples: ['nhà ga', 'ngõ nhỏ', 'giá đỡ', 'nhổ cỏ', 'bố mẹ', 'nhà lá', 'nghé ọ', 'ghế đá'], book: 1 },
-  { id: '21', title: 'Bài 21: r, s', type: 'vowel', content: 'r, s', passage: ['sổ, số, rõ, rẽ, rể, sò, rễ, sợ', 'bó rạ, lọ sứ, nở rộ, sơ mi, sĩ số', '- Cô Na cho bé quả sơ –ri đỏ.', '- Bà cho nhà bé sò, gà ri, su su.'], examples: ['sổ', 'số', 'rõ', 'rẽ', 'rể', 'sò', 'rễ', 'sợ', 'bó rạ', 'lọ sứ', 'nở rộ', 'sơ mi', 'sĩ số', 'gà ri', 'ca sĩ', 'rễ đa'], book: 1,
+  {
+    id: '21', title: 'Bài 21: r, s', type: 'vowel', content: 'r, s', passage: ['sổ, số, rõ, rẽ, rể, sò, rễ, sợ', 'bó rạ, lọ sứ, nở rộ, sơ mi, sĩ số', '- Cô Na cho bé quả sơ –ri đỏ.', '- Bà cho nhà bé sò, gà ri, su su.'], examples: ['sổ', 'số', 'rõ', 'rẽ', 'rể', 'sò', 'rễ', 'sợ', 'bó rạ', 'lọ sứ', 'nở rộ', 'sơ mi', 'sĩ số', 'gà ri', 'ca sĩ', 'rễ đa'], book: 1,
     exercise: { type: 'fill-blank', data: { image: 'https://placehold.co/400x300?text=Ro+Ra', word: 'cái r_', missing: 'ổ' } },
     quiz: [
       { question: 'Tiếng nào có âm r?', options: ['sò', 'rổ', 'xô'], correctAnswer: 1 },
       { question: 'Tiếng nào có âm s?', options: ['rạ', 'sẻ', 'xe'], correctAnswer: 1 }
     ]
   },
-  { id: '22', title: 'Bài 22: t, tr', type: 'vowel', content: 't, tr', passage: ['tổ, to, trà, tủ, trí, tre, từ, trọ', 'tổ cò, cá trê, củ từ, nhà trẻ, tre ngà', '- Chị Nga tô lá cờ đỏ.', '- Ngõ nhỏ nhà bé có tre ngà.'], examples: ['tổ', 'to', 'trà', 'tủ', 'trí', 'tre', 'từ', 'trọ', 'tổ cò', 'cá trê', 'củ từ', 'nhà trẻ', 'tre ngà', 'tủ gỗ', 'trí nhớ', 'trà đá'], book: 1,
+  {
+    id: '22', title: 'Bài 22: t, tr', type: 'vowel', content: 't, tr', passage: ['tổ, to, trà, tủ, trí, tre, từ, trọ', 'tổ cò, cá trê, củ từ, nhà trẻ, tre ngà', '- Chị Nga tô lá cờ đỏ.', '- Ngõ nhỏ nhà bé có tre ngà.'], examples: ['tổ', 'to', 'trà', 'tủ', 'trí', 'tre', 'từ', 'trọ', 'tổ cò', 'cá trê', 'củ từ', 'nhà trẻ', 'tre ngà', 'tủ gỗ', 'trí nhớ', 'trà đá'], book: 1,
     exercise: { type: 'matching', data: { pairs: [{ left: 'nhà', right: 'trẻ' }, { left: 'cá', right: 'trê' }, { left: 'tủ', right: 'gỗ' }] } },
     quiz: [
       { question: 'Tiếng nào có âm t?', options: ['trà', 'tô', 'thỏ'], correctAnswer: 1 },
@@ -224,20 +236,22 @@ export const lessons: Lesson[] = [
   { id: '83', title: 'Bài 83: Ôn tập', type: 'reading', content: 'Ôn tập cuối học kì 1', passage: ['voi, hổ và khỉ, trăng sáng, đón tết', 'voi, hổ và khỉ.', 'trăng sáng soi sân nhà.'], examples: ['voi, hổ và khỉ', 'trăng sáng', 'đón tết'], book: 1 },
 
   // TẬP 2: BÀI ĐỌC THEO CHỦ ĐỀ
-  { id: 't2-1', title: 'Tôi là học sinh lớp 1', type: 'reading', topic: 'Tôi và các bạn', content: 'Tôi là học sinh lớp 1', passage: 'Em là học sinh lớp Một. Em có nhiều bạn mới. Chúng em cùng học, cùng chơi.', examples: [], book: 2,
+  {
+    id: 't2-1', title: 'Tôi là học sinh lớp 1', type: 'reading', topic: 'Tôi và các bạn', content: 'Tôi là học sinh lớp 1', passage: 'Em là học sinh lớp Một. Em có nhiều bạn mới. Chúng em cùng học, cùng chơi.', examples: [], book: 2,
     quiz: [
       { question: 'Bạn nhỏ là học sinh lớp mấy?', options: ['Lớp 1', 'Lớp 2', 'Lớp 3'], correctAnswer: 0 },
       { question: 'Ở trường bạn nhỏ có gì?', options: ['Nhiều đồ chơi', 'Nhiều bạn mới', 'Nhiều kẹo'], correctAnswer: 1 }
     ]
   },
-  { id: 't2-2', title: 'Gia đình thân thương', type: 'reading', topic: 'Mái ấm gia đình', content: 'Gia đình thân thương', passage: 'Nhà em có bố, mẹ và em. Cả nhà em rất yêu thương nhau.', examples: [], book: 2,
+  {
+    id: 't2-2', title: 'Gia đình thân thương', type: 'reading', topic: 'Mái ấm gia đình', content: 'Gia đình thân thương', passage: 'Nhà em có bố, mẹ và em. Cả nhà em rất yêu thương nhau.', examples: [], book: 2,
     quiz: [
       { question: 'Nhà bạn nhỏ có ai?', options: ['Bố, mẹ và em', 'Ông, bà và em', 'Chỉ có mẹ và em'], correctAnswer: 0 }
     ]
   },
   { id: 't2-3', title: 'Đi học', type: 'reading', topic: 'Trường học', content: 'Đi học', passage: 'Hôm nay em đi học. Trường của em rất đẹp. Cô giáo dạy em múa hát.', examples: [], book: 2, quiz: [{ question: 'Hôm nay em đi đâu?', options: ['Đi chơi', 'Đi học', 'Đi chợ'], correctAnswer: 1 }, { question: 'Trường của em như thế nào?', options: ['Rất đẹp', 'Rất to', 'Rất cũ'], correctAnswer: 0 }] },
   { id: 't2-4', title: 'Bữa cơm gia đình', type: 'reading', topic: 'Mái ấm gia đình', content: 'Bữa cơm gia đình', passage: 'Bữa cơm gia đình thật ấm áp. Mẹ nấu ăn rất ngon. Cả nhà cùng ăn cơm vui vẻ.', examples: [], book: 2 },
-  
+
   // CHỦ ĐỀ: NHÀ TRƯỜNG
   { id: 't2-5', title: 'Trường em', type: 'reading', topic: 'Trường học', content: 'Trường học là ngôi nhà thứ hai', passage: ['Trường học là ngôi nhà thứ hai của em.', 'Ở trường có cô giáo hiền như mẹ, có nhiều bè bạn thân thiết như anh em.', 'Trường học dạy em thành người tốt, dạy em những điều hay.'], examples: ['ngôi nhà', 'thân thiết', 'điều hay'], book: 2 },
   { id: 't2-6', title: 'Tặng cháu', type: 'reading', topic: 'Bác Hồ kính yêu', content: 'Vở này ta tặng cháu yêu ta', passage: ['Vở này ta tặng cháu yêu ta', 'Tỏ chút lòng yêu cháu gọi là', 'Mong cháu ra công mà học tập', 'Mai sau cháu giúp nước non nhà.', '- Hồ Chí Minh'], examples: ['tặng cháu', 'nước non', 'học tập'], book: 2 },
