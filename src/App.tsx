@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, GraduationCap, Layout, ChevronRight, Star, Home, CheckCircle2, Trophy, Users, Baby, Lock, ArrowLeft, BarChart3, Settings, Plus, Trash2, Check, Sparkles, Bell, Calendar, X, Download, Upload, Save } from 'lucide-react';
+import { BookOpen, GraduationCap, Layout, ChevronRight, Star, Home, CheckCircle2, Trophy, Users, Baby, Lock, ArrowLeft, BarChart3, Settings, Plus, RefreshCw, Trash2, Check, Sparkles, Bell, Calendar, X, Download, Upload, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { lessons as staticLessons, Lesson } from './data/lessons';
 import { QuizComponent } from './components/QuizComponent';
@@ -1062,6 +1062,25 @@ function FeedbackBox({ feedback }: any) {
   );
 }
 
+function StatCard({ icon, value, label, color }: any) {
+  const colors: any = {
+    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    blue: 'bg-blue-50 text-blue-600 border-blue-100',
+    purple: 'bg-purple-50 text-purple-600 border-purple-100',
+  };
+  return (
+    <div className={cn("p-6 rounded-3xl border shadow-sm flex items-center gap-4 bg-white", colors[color])}>
+      <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", colors[color].split(' ')[0])}>
+        {icon}
+      </div>
+      <div>
+        <div className="text-2xl font-black text-slate-900">{value}</div>
+        <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{label}</div>
+      </div>
+    </div>
+  );
+}
+
 function WelcomeBox() {
   return (
     <div className="h-full flex flex-col items-center justify-center text-center p-12 bg-white rounded-[2.5rem] border border-orange-50 shadow-sm">
@@ -1813,18 +1832,5 @@ function AssignmentModal({ onClose, onConfirm }: { onClose: () => void, onConfir
         </div>
       </motion.div>
     </motion.div>
-  )
-}
-
-function StatCard({ icon, value, label, color }: any) {
-  return (
-    <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-      <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center mb-4",
-        color === 'emerald' ? "bg-emerald-50 text-emerald-600" : color === 'blue' ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600")}>
-        {icon}
-      </div>
-      <div className="text-3xl font-black text-slate-900">{value}</div>
-      <div className="text-sm font-bold text-slate-400 uppercase tracking-widest">{label}</div>
-    </div>
   );
 }
