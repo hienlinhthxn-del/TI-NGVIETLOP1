@@ -11,13 +11,16 @@ function cn(...inputs: ClassValue[]) {
 interface AuthScreenProps {
     onLogin: (role: 'student' | 'teacher' | 'parent', userData: any) => void;
     loginService: (username: string, password?: string) => Promise<{ success: boolean; error?: string; user?: any }>;
+    registerService: (userData: any) => Promise<{ success: boolean; error?: string }>;
 }
 
-export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, loginService }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, loginService, registerService }) => {
     const [step, setStep] = useState<'role' | 'login' | 'select-student'>('role');
+    const [isRegister, setIsRegister] = useState(false);
     const [role, setRole] = useState<'student' | 'teacher' | 'parent' | null>(null);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [fullName, setFullName] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [students, setStudents] = useState<any[]>([]);
@@ -44,22 +47,29 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, loginService })
         }
     };
 
-    const handleLogin = async (e?: React.FormEvent, selectedUser?: string) => {
+    const handleAuth = async (e?: React.FormEvent, selectedUser?: string) => {
         if (e) e.preventDefault();
         setError('');
         setLoading(true);
 
-        const targetUsername = selectedUser || username;
-        // QUAN TRỌNG: Nếu là chọn học sinh (selectedUser tồn tại), luôn gửi password là chuỗi rỗng.
-        // Nếu không, dùng password từ state (dành cho GV/PH).
-        const targetPassword = selectedUser ? "" : password;
-
-        const res = await loginService(targetUsername, targetPassword);
-
-        if (res.success) {
-            onLogin(role || 'student', res.user);
+        if (isRegister) {
+            const res = await registerService({ username, password, fullName, role: role || 'teacher' });
+            if (res.success) {
+                alert("Đăng ký thành công! Vui lòng đăng nhập.");
+                setIsRegister(false);
+            } else {
+                setError(res.error || 'Đăng ký thất bại');
+            }
         } else {
-            setError(res.error || 'Đăng nhập thất bại');
+            const targetUsername = selectedUser || username;
+            const targetPassword = selectedUser ? "" : password;
+            const res = await loginService(targetUsername, targetPassword);
+
+            if (res.success) {
+                onLogin(role || 'student', res.user);
+            } else {
+                setError(res.error || 'Đăng nhập thất bại');
+            }
         }
         setLoading(false);
     };
@@ -106,7 +116,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, loginService })
                 className="bg-white p-8 md:p-12 rounded-[3rem] shadow-xl border border-orange-100 max-w-md w-full relative overflow-hidden"
             >
                 <button
-                    onClick={() => setStep('role')}
+                    onClick={() => { setStep('role'); setIsRegister(false); }}
                     className="absolute top-8 left-8 p-2 hover:bg-orange-50 rounded-xl text-orange-600 transition-colors"
                 >
                     <ArrowLeft size={20} />
@@ -118,10 +128,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, loginService })
                         {role === 'student' ? <Baby size={40} /> : role === 'teacher' ? <GraduationCap size={40} /> : <Users size={40} />}
                     </div>
                     <h2 className="text-2xl font-black text-slate-900">
-                        {role === 'student' ? 'Chào con yêu!' : role === 'teacher' ? 'Đăng nhập Giáo viên' : 'Đăng nhập Phụ huynh'}
+                        {role === 'student' ? 'Chào con yêu!' : role === 'teacher' ? (isRegister ? 'Tạo tài khoản Giáo viên' : 'Đăng nhập Giáo viên') : 'Đăng nhập Phụ huynh'}
                     </h2>
                     <p className="text-slate-400 font-medium text-center mt-2">
-                        {role === 'student' ? 'Hãy chọn tên của mình để bắt đầu học nhé' : role === 'parent' ? 'Ba mẹ chọn tên con để xem tiến độ nhé' : 'Vui lòng nhập tài khoản để tiếp tục'}
+                        {role === 'student' ? 'Hãy chọn tên của mình để bắt đầu học nhé' : role === 'parent' ? 'Ba mẹ chọn tên con để xem tiến độ nhé' : (isRegister ? 'Điền thông tin để tạo tài khoản mới' : 'Vui lòng nhập tài khoản để tiếp tục')}
                     </p>
                 </div>
 
@@ -139,7 +149,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, loginService })
                         ) : students.map(s => (
                             <button
                                 key={s.id}
-                                onClick={() => { setUsername(s.username); handleLogin(undefined, s.username); }}
+                                onClick={() => { setUsername(s.username); handleAuth(undefined, s.username); }}
                                 className={cn("w-full p-4 rounded-2xl border border-slate-100 transition-all flex items-center justify-between group",
                                     role === 'student' ? "hover:border-blue-300 hover:bg-blue-50" : "hover:border-orange-300 hover:bg-orange-50")}
                                 disabled={loading}
@@ -161,7 +171,23 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, loginService })
                         </div>
                     </div>
                 ) : (
-                    <form onSubmit={handleLogin} className="space-y-4">
+                    <form onSubmit={handleAuth} className="space-y-4">
+                        {isRegister && (
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Họ và tên</label>
+                                <div className="relative">
+                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                    <input
+                                        type="text"
+                                        required
+                                        value={fullName}
+                                        onChange={(e) => setFullName(e.target.value)}
+                                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-slate-700"
+                                        placeholder="Họ tên của bạn..."
+                                    />
+                                </div>
+                            </div>
+                        )}
                         <div className="space-y-1">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Tài khoản</label>
                             <div className="relative">
@@ -195,8 +221,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin, loginService })
                             disabled={loading}
                             className={cn("w-full py-4 rounded-2xl font-black text-white shadow-lg transition-all active:scale-95 mt-4 disabled:opacity-50 disabled:active:scale-100",
                                 role === 'teacher' ? "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200" : "bg-orange-500 hover:bg-orange-600 shadow-orange-200")}>
-                            {loading ? 'Đang xử lý...' : 'ĐĂNG NHẬP'}
+                            {loading ? 'Đang xử lý...' : (isRegister ? 'TẠO TÀI KHOẢN' : 'ĐĂNG NHẬP')}
                         </button>
+
+                        {role === 'teacher' && (
+                            <div className="text-center pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsRegister(!isRegister)}
+                                    className="text-xs font-bold text-emerald-600 hover:underline"
+                                >
+                                    {isRegister ? 'Đã có tài khoản? Đăng nhập' : 'Chưa có tài khoản? Đăng ký ngay'}
+                                </button>
+                            </div>
+                        )}
                     </form>
                 )}
             </motion.div>

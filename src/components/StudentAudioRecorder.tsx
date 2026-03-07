@@ -38,13 +38,15 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: supportedType || 'audio/webm' });
+        const type = mediaRecorder.mimeType || supportedType || 'audio/webm';
+        const blob = new Blob(chunksRef.current, { type });
         setAudioBlob(blob);
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
       };
 
-      mediaRecorder.start();
+      // Đưa khoảng thời gian ghi âm (timeslice) vào start() giúp một số browser mobile ổn định hơn (vd: 1000ms)
+      mediaRecorder.start(1000);
       setIsRecording(true);
       setFeedback(null);
     } catch (err) {
@@ -78,11 +80,14 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
         if (onFeedback) onFeedback(result, audioBlob);
 
         if (recordingId) {
-          // Upload chạy ngầm, không chặn UI
-          // Chuyển đổi blob sang định dạng chuẩn trước khi upload nếu cần? 
-          // Cloudinary có thể tự xử lý, nhưng ta gửi kèm mimeType đúng
-          uploadAudioToCloud(recordingId, audioBlob).catch(err => console.error("Upload background failed", err));
+          // Gửi kèm mimeType và đảm bảo có tên file để Cloudinary xử lý tốt hơn (.webm, .mp4, .ogg)
+          const extension = audioBlob.type.includes('mp4') ? 'mp4' : audioBlob.type.includes('ogg') ? 'ogg' : 'webm';
+          uploadAudioToCloud(recordingId, audioBlob, extension).catch(err => console.error("Upload background failed", err));
         }
+
+        // Đảm bảo cập nhật feedback ngay cả khi upload đang chạy
+        setFeedback(result);
+        if (onFeedback) onFeedback(result, audioBlob);
 
         setIsAnalyzing(false);
       };

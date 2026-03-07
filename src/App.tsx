@@ -92,7 +92,7 @@ export default function App() {
   };
 
   if (!role) {
-    return <AuthScreen onLogin={handleLogin} loginService={login} />;
+    return <AuthScreen onLogin={handleLogin} loginService={login} registerService={register} />;
   }
 
   return (
@@ -389,7 +389,7 @@ export default function App() {
                   </AnimatePresence>
                 </div>
               </div>
-            ) : <TeacherDashboard progress={progress} users={users} addBulkUsers={addBulkUsers} classes={classes} onAddClass={addClass} onReset={resetToDefault} lessons={lessons} />}
+            ) : <TeacherDashboard progress={progress} users={users} addUser={addUser} addBulkUsers={addBulkUsers} classes={classes} onAddClass={addClass} onReset={resetToDefault} lessons={lessons} />}
           </>
         )}
         {role === 'parent' && <ParentDashboard users={users} classes={classes} lessons={lessons} currentUserId={currentUserId} />}
@@ -1072,27 +1072,64 @@ function WelcomeBox() {
   );
 }
 
-function TeacherDashboard({ progress, users, addBulkUsers, classes, onAddClass, onReset, lessons }: { progress: ProgressData, users: UserProfile[], addBulkUsers: (names: string[], classId: string) => number, classes: ClassGroup[], onAddClass: (name: string) => void, onReset?: () => void, lessons: Lesson[] }) {
+function TeacherDashboard({ progress, users, addUser, addBulkUsers, classes, onAddClass, onReset, lessons }: { progress: ProgressData, users: UserProfile[], addUser: (name: string, classId?: string) => void, addBulkUsers: (names: string[], classId: string) => number, classes: ClassGroup[], onAddClass: (name: string) => void, onReset?: () => void, lessons: Lesson[] }) {
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [selectedClassId, setSelectedClassId] = useState(classes[0]?.id || '');
   const [isAddingClass, setIsAddingClass] = useState(false);
   const [newClassName, setNewClassName] = useState('');
+  const [isAddingStudent, setIsAddingStudent] = useState(false);
+  const [newStudentName, setNewStudentName] = useState('');
 
   // Filter students by selected class
   const classStudents = users.filter(u => u.classId === selectedClassId || (!u.classId && selectedClassId === '1A3')); // Fallback for old data
 
+  const [allStudentsProgress, setAllStudentsProgress] = useState<Record<string, ProgressData>>({});
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Tải tiến độ của tất cả học sinh từ server khi chọn lớp hoặc khi danh sách users thay đổi
+  useEffect(() => {
+    const fetchAllProgress = async () => {
+      setIsSyncing(true);
+      const progressMap: Record<string, ProgressData> = {};
+
+      try {
+        // Fetch song song để tối ưu tốc độ
+        await Promise.all(classStudents.map(async (user) => {
+          try {
+            const res = await fetch(`/api/progress?userId=${user.id}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data) progressMap[user.id] = data;
+            }
+          } catch (e) {
+            console.error(`Error fetching progress for ${user.id}:`, e);
+          }
+        }));
+        setAllStudentsProgress(progressMap);
+      } finally {
+        setIsSyncing(false);
+      }
+    };
+
+    if (classStudents.length > 0) {
+      fetchAllProgress();
+    }
+  }, [selectedClassId, users.length]);
+
   const students = classStudents.map(user => {
     const userId = user.id;
-
-    let userProgress: ProgressData | null = null;
+    // Ưu tiên dữ liệu từ server (allStudentsProgress), sau đó mới đến local (nếu có)
+    const serverProgress = allStudentsProgress[userId];
+    let localProgress: ProgressData | null = null;
     try {
       const saved = localStorage.getItem(`htl1-progress-${userId}`);
-      if (saved) userProgress = JSON.parse(saved);
+      if (saved) localProgress = JSON.parse(saved);
     } catch (e) { }
 
+    const userProgress = serverProgress || localProgress;
     const completedCount = userProgress?.completedLessons?.length || 0;
-    const scores = userProgress ? Object.values(userProgress.scores) : [];
+    const scores = userProgress ? Object.values(userProgress.scores || {}) : [];
     const avgScore = scores.length > 0 ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) : 0;
     const lastActive = userProgress?.lastActivity ? new Date(userProgress.lastActivity).toLocaleDateString('vi-VN') : 'Chưa học';
 
@@ -1141,6 +1178,15 @@ function TeacherDashboard({ progress, users, addBulkUsers, classes, onAddClass, 
       onAddClass(newClassName.trim());
       setNewClassName('');
       setIsAddingClass(false);
+    }
+  };
+
+  const handleAddStudent = () => {
+    if (newStudentName.trim()) {
+      addUser(newStudentName.trim(), selectedClassId);
+      setNewStudentName('');
+      setIsAddingStudent(false);
+      alert(`Đã thêm học sinh ${newStudentName} thành công!`);
     }
   };
 
@@ -1322,6 +1368,12 @@ function TeacherDashboard({ progress, users, addBulkUsers, classes, onAddClass, 
           </div>
           <div className="flex items-center gap-4">
             <button
+              onClick={() => setIsAddingStudent(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200"
+            >
+              <Plus size={18} /> Thêm học sinh
+            </button>
+            <button
               onClick={() => fileInputRef.current?.click()}
               className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-xl font-bold hover:bg-blue-200 transition-colors"
             >
@@ -1343,12 +1395,47 @@ function TeacherDashboard({ progress, users, addBulkUsers, classes, onAddClass, 
             {onReset && (
               <button
                 onClick={onReset}
-                className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-xl font-bold hover:bg-red-200 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-500 rounded-xl font-bold hover:bg-red-100 transition-colors"
               >
                 <Trash2 size={18} /> Làm mới DS
               </button>
             )}
             <div className="text-sm font-bold text-slate-400">Sĩ số: {students.length} học sinh</div>
+            {isSyncing && <div className="text-[10px] font-bold text-blue-500 animate-pulse bg-blue-50 px-2 py-1 rounded-lg">Đang đồng bộ dữ liệu lớp...</div>}
+
+            {/* Add Student Modal */}
+            <AnimatePresence>
+              {isAddingStudent && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-6" onClick={() => setIsAddingStudent(false)}>
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    className="bg-white p-8 rounded-[2rem] shadow-2xl max-w-sm w-full"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <h3 className="text-xl font-black text-slate-900 mb-4">Thêm học sinh mới</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Họ và tên học sinh</label>
+                        <input
+                          autoFocus
+                          value={newStudentName}
+                          onChange={e => setNewStudentName(e.target.value)}
+                          placeholder="Nguyễn Văn A..."
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold"
+                          onKeyDown={e => e.key === 'Enter' && handleAddStudent()}
+                        />
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <button onClick={() => setIsAddingStudent(false)} className="flex-1 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-colors text-sm">Hủy</button>
+                        <button onClick={handleAddStudent} className="flex-1 py-3 rounded-xl font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors text-sm">Thêm em</button>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 

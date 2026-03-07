@@ -6,10 +6,11 @@ const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_PRESET || "ml_default"; //
  * Upload audio blob lên Cloudinary
  * @param recordingId ID duy nhất của file ghi âm (vd: student-hs01-lesson1-main)
  * @param audioBlob File âm thanh dạng Blob
+ * @param extension Phần mở rộng (webm, mp4, etc)
  */
-export const uploadAudioToCloud = async (recordingId: string, audioBlob: Blob) => {
+export const uploadAudioToCloud = async (recordingId: string, audioBlob: Blob, extension: string = "webm") => {
   const formData = new FormData();
-  formData.append("file", audioBlob);
+  formData.append("file", audioBlob, `${recordingId}.${extension}`);
   formData.append("upload_preset", UPLOAD_PRESET);
   formData.append("public_id", recordingId);
   formData.append("resource_type", "video"); // Cloudinary thường xử lý audio qua API video/raw
