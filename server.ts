@@ -246,15 +246,15 @@ async function startServer() {
   app.get("/api/audio/:recordingId", (req, res) => {
     const { recordingId } = req.params;
     // Lấy Cloud Name từ .env hoặc dùng mặc định đã cấu hình trong dự án
-    const cloudName = process.env.VITE_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME || "dx8v9vuxo";
+    const cloudName = process.env.VITE_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME || "dcc69wfln";
 
     if (!cloudName) {
       return res.status(500).json({ error: "Cloudinary Cloud Name chưa được cấu hình trên server." });
     }
 
     // Chuyển hướng tới URL audio trên Cloudinary
-    // Cloudinary tự động xử lý đuôi file nếu public_id đúng
-    const audioUrl = `https://res.cloudinary.com/${cloudName}/video/upload/${recordingId}`;
+    // Thêm .mp3 để Cloudinary tự động chuyển đổi định dạng
+    const audioUrl = `https://res.cloudinary.com/${cloudName}/video/upload/${recordingId}.mp3`;
     res.redirect(audioUrl);
   });
 

@@ -7,12 +7,11 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: "Recording ID is required" });
     }
 
-    const cloudName = process.env.VITE_CLOUDINARY_CLOUD_NAME || "dx8v9vuxo";
+    const cloudName = process.env.VITE_CLOUDINARY_CLOUD_NAME || "dcc69wfln";
 
     // Chuyển hướng tới URL audio trên Cloudinary
-    // Thêm resource_type=video ngầm định qua path /video/
-    // Thêm f_auto,q_auto để tối ưu hóa việc tải và tương thích
-    const audioUrl = `https://res.cloudinary.com/${cloudName}/video/upload/f_auto,q_auto/${recordingId}.mp3`;
+    // Đối với audio, chỉ cần .mp3 là Cloudinary tự động chuyển đổi định dạng
+    const audioUrl = `https://res.cloudinary.com/${cloudName}/video/upload/${recordingId}.mp3`;
 
     res.redirect(audioUrl);
 }

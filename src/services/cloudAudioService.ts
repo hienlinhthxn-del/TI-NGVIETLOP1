@@ -1,6 +1,6 @@
 // Lấy cấu hình từ biến môi trường
-const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "dx8v9vuxo";
-const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_PRESET || "ml_default"; // Bạn cần tạo Unsigned Preset trên Cloudinary
+const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "dcc69wfln";
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_PRESET || "ml_default";
 
 /**
  * Upload audio blob lên Cloudinary
@@ -21,9 +21,14 @@ export const uploadAudioToCloud = async (recordingId: string, audioBlob: Blob, e
       body: formData
     });
 
-    if (!res.ok) throw new Error("Upload failed");
+    if (!res.ok) {
+      const errorData = await res.json();
+      console.error("[Cloudinary Error]", errorData);
+      throw new Error(errorData.error?.message || "Upload failed");
+    }
 
     const data = await res.json();
+    console.log("[Cloudinary Success]", data.secure_url);
     return data;
   } catch (e) {
     console.error("Cloudinary Upload Error:", e);

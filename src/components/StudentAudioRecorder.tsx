@@ -67,36 +67,45 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
     if (!audioBlob) return;
 
     setIsAnalyzing(true);
+    setFeedback(null);
+
     try {
       const reader = new FileReader();
       reader.readAsDataURL(audioBlob);
       reader.onloadend = async () => {
         const base64data = (reader.result as string).split(',')[1];
         const textToAnalyze = Array.isArray(expectedText) ? expectedText.join(' ') : expectedText;
-        const result = await analyzeReading(base64data, textToAnalyze, audioBlob.type);
 
-        // Hiển thị kết quả ngay lập tức cho học sinh
-        setFeedback(result);
-        if (onFeedback) onFeedback(result, audioBlob);
+        // Chạy song song: Phân tích AI và Tải lên Cloud
+        const analysisPromise = analyzeReading(base64data, textToAnalyze, audioBlob.type);
 
+        let uploadPromise = Promise.resolve();
         if (recordingId) {
-          // Gửi kèm mimeType và đảm bảo có tên file để Cloudinary xử lý tốt hơn (.webm, .mp4, .ogg, .mp3)
           const extension = audioBlob.type.includes('mp4') ? 'mp4' :
             audioBlob.type.includes('ogg') ? 'ogg' :
               audioBlob.type.includes('mpeg') ? 'mp3' : 'webm';
-          console.log(`[Upload] Uploading student audio: ${recordingId}.${extension}`);
-          uploadAudioToCloud(recordingId, audioBlob, extension).catch(err => console.error("Upload background failed", err));
+          console.log(`[Upload] Starting: ${recordingId}.${extension}`);
+          uploadPromise = uploadAudioToCloud(recordingId, audioBlob, extension);
         }
 
-        // Đảm bảo cập nhật feedback ngay cả khi upload đang chạy
-        setFeedback(result);
-        if (onFeedback) onFeedback(result, audioBlob);
+        try {
+          const [result] = await Promise.all([analysisPromise, uploadPromise]);
 
-        setIsAnalyzing(false);
+          setFeedback(result);
+          if (onFeedback) onFeedback(result, audioBlob);
+          setIsAnalyzing(false);
+        } catch (err: any) {
+          console.error("Task failed:", err);
+          if (err.message?.includes("Upload")) {
+            alert("Lỗi lưu âm thanh: " + err.message + ". Con hãy thử chấm điểm lại nhé!");
+          } else {
+            setFeedback({ accuracy: 0, feedback: "Có lỗi xảy ra. Con thử lại nhé!" });
+          }
+          setIsAnalyzing(false);
+        }
       };
     } catch (error) {
-      console.error("Analysis failed:", error);
-      setFeedback({ accuracy: 0, feedback: "Máy chủ AI đang bận. Con thử lại sau nhé!" });
+      console.error("Handle analyze error:", error);
       setIsAnalyzing(false);
     }
   };
