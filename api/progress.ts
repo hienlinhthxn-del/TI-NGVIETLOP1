@@ -48,9 +48,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         try {
             console.log(`[API] Saving progress for user: ${userId}`);
+
+            // Map dữ liệu để khớp với ProgressSchema trong models.ts
+            const updateData = {
+                userId,
+                username: progressData.username,
+                role: progressData.role || 'student',
+                points: progressData.points || 0,
+                completedLessons: progressData.completedLessons || [],
+                data: progressData, // Lưu toàn bộ object để không mất detailedScores, scores...
+                lastUpdated: new Date()
+            };
+
             const updated = await Progress.findOneAndUpdate(
                 { userId },
-                { ...progressData, userId, lastActivity: new Date() },
+                updateData,
                 { upsert: true, new: true, setDefaultsOnInsert: true }
             );
             return res.status(200).json(updated);

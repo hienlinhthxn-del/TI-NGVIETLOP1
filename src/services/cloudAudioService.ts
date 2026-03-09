@@ -11,10 +11,14 @@ const UPLOAD_PRESET = env.VITE_CLOUDINARY_PRESET || "ml_default";
  */
 export const uploadAudioToCloud = async (recordingId: string, audioBlob: Blob, extension: string = "webm") => {
   const formData = new FormData();
+  if (!UPLOAD_PRESET || UPLOAD_PRESET === "ml_default") {
+    console.warn("[Cloudinary] Đang dùng 'ml_default'. Nếu upload thất bại, hãy tạo 'Unsigned Preset' trên Cloudinary và điền vào VITE_CLOUDINARY_PRESET trong file .env");
+  }
+
   formData.append("file", audioBlob, `${recordingId}.${extension}`);
   formData.append("upload_preset", UPLOAD_PRESET);
   formData.append("public_id", recordingId);
-  formData.append("resource_type", "video"); // Cloudinary thường xử lý audio qua API video/raw
+  formData.append("resource_type", "auto"); // Chuyển sang 'auto' để Cloudinary tự nhận diện định dạng tốt hơn
 
   try {
     const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, {
@@ -28,7 +32,7 @@ export const uploadAudioToCloud = async (recordingId: string, audioBlob: Blob, e
 
       const msg = errorData.error?.message || "Upload failed";
       if (msg.includes("unsigned") || msg.includes("Upload preset")) {
-        throw new Error(`Lỗi: 'Upload Preset' ${UPLOAD_PRESET} chưa được cấu hình là 'Unsigned'. Hãy kiểm tra lại dashboard Cloudinary.`);
+        throw new Error(`Cloudinary chưa được cấu hình đúng. Hãy đảm bảo bạn đã tạo một 'Unsigned Upload Preset' tên là '${UPLOAD_PRESET}' trên Cloudinary dashboard.`);
       }
       throw new Error(msg);
     }

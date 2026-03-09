@@ -76,31 +76,39 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
         const base64data = (reader.result as string).split(',')[1];
         const textToAnalyze = Array.isArray(expectedText) ? expectedText.join(' ') : expectedText;
 
-        // Chạy song song: Phân tích AI và Tải lên Cloud
-        const analysisPromise = analyzeReading(base64data, textToAnalyze, audioBlob.type);
-
-        let uploadPromise = Promise.resolve();
-        if (recordingId) {
-          const extension = audioBlob.type.includes('mp4') ? 'mp4' :
-            audioBlob.type.includes('ogg') ? 'ogg' :
-              audioBlob.type.includes('mpeg') ? 'mp3' : 'webm';
-          console.log(`[Upload] Starting: ${recordingId}.${extension}`);
-          uploadPromise = uploadAudioToCloud(recordingId, audioBlob, extension);
-        }
-
+        // 1. Phân tích AI - Quan trọng nhất nên chạy trước
         try {
-          const [result] = await Promise.all([analysisPromise, uploadPromise]);
-
+          const result = await analyzeReading(base64data, textToAnalyze, audioBlob.type);
           setFeedback(result);
-          if (onFeedback) onFeedback(result, audioBlob);
-          setIsAnalyzing(false);
-        } catch (err: any) {
-          console.error("Task failed:", err);
-          if (err.message?.includes("Upload")) {
-            alert("Lỗi lưu âm thanh: " + err.message + ". Con hãy thử chấm điểm lại nhé!");
-          } else {
-            setFeedback({ accuracy: 0, feedback: "Có lỗi xảy ra. Con thử lại nhé!" });
+
+          // Gọi onFeedback ngay sau khi có điểm để lưu vào localStorage/DB
+          if (onFeedback) {
+            onFeedback(result, audioBlob);
           }
+          setIsAnalyzing(false);
+
+          // 2. Chấm điểm xong mới tải lên Cloud ở background (không chặn kết quả)
+          if (recordingId) {
+            const extension = audioBlob.type.includes('mp4') ? 'mp4' :
+              audioBlob.type.includes('ogg') ? 'ogg' :
+                audioBlob.type.includes('mpeg') ? 'mp3' : 'webm';
+
+            console.log(`[Upload] Starting: ${recordingId}.${extension}`);
+
+            // Chạy upload nhưng bắt lỗi riêng để không báo lỗi 'chấm điểm'
+            uploadAudioToCloud(recordingId, audioBlob, extension)
+              .then(() => {
+                console.log(`[Upload] Successfully saved: ${recordingId}`);
+              })
+              .catch(err => {
+                console.error("[Upload] Failed to save audio:", err);
+                // Chỉ thông báo nhẹ cho người dùng nếu cần, hoặc log thầm lặng
+                // alert("Không thể lưu file âm thanh, nhưng điểm của con đã được ghi nhận!");
+              });
+          }
+        } catch (err: any) {
+          console.error("Analysis or process failed:", err);
+          setFeedback({ accuracy: 0, feedback: "Cô chưa nghe rõ, con bấm nút ghi âm và đọc lại cho cô nghe nhé!" });
           setIsAnalyzing(false);
         }
       };
