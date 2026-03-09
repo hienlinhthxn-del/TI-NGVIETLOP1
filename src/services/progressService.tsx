@@ -184,8 +184,9 @@ export const useProgress = () => {
         const res = await fetch(`/api/progress?userId=${currentUserId}`);
         if (res.ok) {
           const cloudData = await res.json();
-          // Hợp nhất dữ liệu từ cloud về, ưu tiên dữ liệu cloud
-          setProgress(prev => ({ ...prev, ...cloudData }));
+          // Đồng bộ với cấu trúc ProgressData: ưu tiên dữ liệu trong cloudData.data nếu có
+          const progressToApply = cloudData.data || cloudData;
+          setProgress(prev => ({ ...prev, ...progressToApply }));
         }
       } catch (e) {
         console.error("Không thể tải dữ liệu từ cloud:", e);

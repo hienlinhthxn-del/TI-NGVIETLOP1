@@ -489,7 +489,7 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
                     recordingId={`student-${currentUserId}-${lesson.id}-main`}
                     onFeedback={(f) => completeLesson(lesson.id, f.accuracy, 'main', undefined, `student-${currentUserId}-${lesson.id}-main`)}
                   />
-                  {progress.detailedScores[lesson.id]?.mainAudio && (
+                  {progress.detailedScores?.[lesson.id]?.mainAudio && (
                     <div className="flex flex-col items-center">
                       <span className="text-[10px] font-bold text-indigo-400 mb-1">Âm thanh đã lưu</span>
                       <StudentAudioPlayer recordingId={progress.detailedScores[lesson.id].mainAudio!} />
@@ -520,7 +520,7 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
                         recordingId={`student-${currentUserId}-${lesson.id}-ex-${i}`}
                         onFeedback={(f) => completeLesson(lesson.id, f.accuracy, 'example', i, `student-${currentUserId}-${lesson.id}-ex-${i}`)}
                       />
-                      {progress.detailedScores[lesson.id]?.examplesAudios?.[i] && (
+                      {progress.detailedScores?.[lesson.id]?.examplesAudios?.[i] && (
                         <StudentAudioPlayer recordingId={progress.detailedScores[lesson.id].examplesAudios[i]} />
                       )}
                     </>
@@ -548,7 +548,7 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
                       recordingId={`student-${currentUserId}-${lesson.id}-passage`}
                       onFeedback={(f) => completeLesson(lesson.id, f.accuracy, 'passage', undefined, `student-${currentUserId}-${lesson.id}-passage`)}
                     />
-                    {progress.detailedScores[lesson.id]?.passageAudio && (
+                    {progress.detailedScores?.[lesson.id]?.passageAudio && (
                       <StudentAudioPlayer recordingId={progress.detailedScores[lesson.id].passageAudio!} />
                     )}
                   </>
@@ -632,7 +632,7 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
           onFeedback={(f) => onFeedback({ ...f, recordingId: `student-${currentUserId}-${lesson.id}-full` })}
           recordingId={`student-${currentUserId}-${lesson.id}-full`}
         />
-        {progress.detailedScores[lesson.id]?.fullAudio && (
+        {progress.detailedScores?.[lesson.id]?.fullAudio && (
           <div className="mt-2 flex items-center gap-2">
             <span className="text-xs font-bold text-orange-600">Nghe lại bài đọc toàn bài:</span>
             <StudentAudioPlayer recordingId={progress.detailedScores[lesson.id].fullAudio!} />
@@ -1144,7 +1144,8 @@ function TeacherDashboard({ progress, users, addUser, addBulkUsers, classes, onA
         const results = await res.json();
         if (Array.isArray(results)) {
           results.forEach((p: any) => {
-            progressMap[p.userId] = p;
+            // Flatten the nested 'data' field from MongoDB
+            progressMap[p.userId] = p.data || p;
           });
         }
       } else {
@@ -1154,7 +1155,7 @@ function TeacherDashboard({ progress, users, addUser, addBulkUsers, classes, onA
             const r = await fetch(`/api/progress?userId=${user.id}`);
             if (r.ok) {
               const data = await r.json();
-              if (data) progressMap[user.id] = data;
+              if (data) progressMap[user.id] = data.data || data;
             }
           } catch (e) { }
         }));
@@ -1327,7 +1328,7 @@ function TeacherDashboard({ progress, users, addUser, addBulkUsers, classes, onA
               <tbody className="divide-y divide-slate-50">
                 {studentProgress.completedLessons.map((lessonId: string) => {
                   const lesson = lessons.find(l => l.id === lessonId);
-                  const scores = studentProgress.detailedScores[lessonId] || {};
+                  const scores = studentProgress?.detailedScores?.[lessonId] || {};
                   if (!lesson) return null;
 
                   return (
@@ -1365,7 +1366,7 @@ function TeacherDashboard({ progress, users, addUser, addBulkUsers, classes, onA
                       </td>
                       <td className="py-4">
                         <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-bold">
-                          {studentProgress.scores[lessonId]}%
+                          {studentProgress?.scores?.[lessonId] || 0}%
                         </span>
                       </td>
                     </tr>
@@ -1737,7 +1738,7 @@ function ParentDashboard({ users, classes, lessons, currentUserId }: { users: Us
             <tbody className="divide-y divide-orange-50">
               {(studentProgress.completedLessons || []).map((id: string) => {
                 const lesson = lessons.find(l => l.id === id);
-                const scores = (studentProgress.detailedScores && studentProgress.detailedScores[id]) || {};
+                const scores = (studentProgress?.detailedScores && studentProgress.detailedScores[id]) || {};
                 if (!lesson) return null;
 
                 return (
