@@ -27,10 +27,15 @@ export const uploadAudioToCloud = async (recordingId: string, audioBlob: Blob, e
     });
 
     if (!res.ok) {
-      const errorData = await res.json();
-      console.error("[Cloudinary Error]", errorData);
+      let msg = "Upload failed";
+      try {
+        const errorData = await res.json();
+        console.error("[Cloudinary Error]", errorData);
+        msg = errorData.error?.message || msg;
+      } catch (e) {
+        msg = await res.text();
+      }
 
-      const msg = errorData.error?.message || "Upload failed";
       if (msg.includes("unsigned") || msg.includes("Upload preset")) {
         throw new Error(`Cloudinary chưa được cấu hình đúng. Hãy đảm bảo bạn đã tạo một 'Unsigned Upload Preset' tên là '${UPLOAD_PRESET}' trên Cloudinary dashboard.`);
       }
