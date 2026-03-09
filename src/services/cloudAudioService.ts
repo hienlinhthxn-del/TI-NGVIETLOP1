@@ -18,10 +18,10 @@ export const uploadAudioToCloud = async (recordingId: string, audioBlob: Blob, e
   formData.append("file", audioBlob, `${recordingId}.${extension}`);
   formData.append("upload_preset", UPLOAD_PRESET);
   formData.append("public_id", recordingId);
-  formData.append("resource_type", "auto"); // Chuyển sang 'auto' để Cloudinary tự nhận diện định dạng tốt hơn
+  formData.append("resource_type", "video"); // Cloudinary treats audio as video
 
   try {
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, {
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`, {
       method: "POST",
       body: formData
     });

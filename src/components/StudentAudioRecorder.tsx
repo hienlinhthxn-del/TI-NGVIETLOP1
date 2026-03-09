@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Mic, Square, Play, RefreshCw, Sparkles, Loader2 } from 'lucide-react';
 import { analyzeReading } from '../services/geminiService';
 import { uploadAudioToCloud } from '../services/cloudAudioService'; // Đảm bảo import đúng
+import { saveStudentAudio } from '../services/customAudioService';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface StudentAudioRecorderProps {
@@ -95,6 +96,9 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
 
             console.log(`[Upload] Starting: ${recordingId}.${extension}`);
 
+            // Lưu file vào IndexedDB làm dự phòng
+            saveStudentAudio(recordingId, audioBlob).catch(e => console.error("Local save error:", e));
+
             // Chạy upload nhưng bắt lỗi riêng để không báo lỗi 'chấm điểm'
             uploadAudioToCloud(recordingId, audioBlob, extension)
               .then(() => {
@@ -102,8 +106,8 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
               })
               .catch(err => {
                 console.error("[Upload] Failed to save audio:", err);
-                // Chỉ thông báo nhẹ cho người dùng nếu cần, hoặc log thầm lặng
-                // alert("Không thể lưu file âm thanh, nhưng điểm của con đã được ghi nhận!");
+                // Cải thiện thông báo lỗi cho phụ huynh/học sinh biết
+                alert("Bạn đang dùng ở chế độ ngoại tuyến (Offline) hoặc máy chủ đang bận. Điểm số của con đã được lưu lại, nhưng file ghi âm có thể không được tải lên máy chủ của cô giáo.");
               });
           }
         } catch (err: any) {

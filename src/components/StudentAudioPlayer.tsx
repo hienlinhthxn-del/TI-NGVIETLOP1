@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Play, Loader2 } from 'lucide-react';
+import { getStudentAudio } from '../services/customAudioService';
 
 interface StudentAudioPlayerProps {
   recordingId: string;
@@ -8,11 +9,23 @@ interface StudentAudioPlayerProps {
 export function StudentAudioPlayer({ recordingId }: StudentAudioPlayerProps) {
   const [isLoading, setIsLoading] = useState(false);
 
-  const handlePlay = () => {
+  const handlePlay = async () => {
     setIsLoading(true);
 
+    let audioSrc = `/api/audio/${recordingId}`;
+
+    // Thử lấy từ IndexedDB để nghe lại trực tiếp (ngay cả khi offline hoặc Cloudinary lỗi)
+    try {
+      const localAudioBlob = await getStudentAudio(recordingId);
+      if (localAudioBlob) {
+        audioSrc = URL.createObjectURL(localAudioBlob);
+      }
+    } catch (e) {
+      console.warn("Could not find local audio, falling back to Cloudinary:", e);
+    }
+
     // Trên Mobile, play() phải được gọi trực tiếp trong click handler
-    const audio = new Audio(`/api/audio/${recordingId}`);
+    const audio = new Audio(audioSrc);
 
     // Thiết lập các thuộc tính cần thiết cho Mobile
     audio.preload = "auto";
@@ -23,14 +36,21 @@ export function StudentAudioPlayer({ recordingId }: StudentAudioPlayerProps) {
 
     audio.onended = () => {
       setIsLoading(false);
+      // Giải phóng URL nếu đã tạo từ Blob
+      if (audioSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(audioSrc);
+      }
     };
 
     audio.onerror = (e) => {
-      console.error(`Error loading audio from /api/audio/${recordingId}:`, e);
+      console.error(`Error loading audio from ${audioSrc}:`, e);
       // Hiển thị chi tiết lỗi nếu có thể
       const errorMsg = audio.error ? ` (Mã lỗi: ${audio.error.code})` : "";
       alert(`Không thể tải bài đọc${errorMsg}. Có thể file đang được xử lý trên máy chủ hoặc do kết nối mạng yếu. Con hãy thử lại sau giây lát nhé!`);
       setIsLoading(false);
+      if (audioSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(audioSrc);
+      }
     };
 
     // Gọi play ngay lập tức
