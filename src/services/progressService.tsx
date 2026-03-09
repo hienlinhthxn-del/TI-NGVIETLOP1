@@ -3,8 +3,13 @@ import { CheckCircle2, Trophy, Clock, Star } from 'lucide-react';
 
 export interface LessonPartScore {
   main?: number;
+  mainAudio?: string;
   examples?: Record<number, number>;
+  examplesAudios?: Record<number, string>;
   passage?: number;
+  passageAudio?: string;
+  full?: number;
+  fullAudio?: string;
 }
 
 export interface Badge {
@@ -288,7 +293,7 @@ export const useProgress = () => {
     return newClass.id;
   };
 
-  const completeLesson = (lessonId: string, score?: number, part?: string, partIndex?: number) => {
+  const completeLesson = (lessonId: string, score?: number, part?: string, partIndex?: number, recordingId?: string) => {
     setProgress(prev => {
       const isNewLesson = !prev.completedLessons.includes(lessonId);
       const newCompleted = isNewLesson
@@ -313,16 +318,24 @@ export const useProgress = () => {
       if (score !== undefined) {
         if (part === 'main') {
           newDetailed[lessonId].main = Math.max(newDetailed[lessonId].main || 0, score);
+          if (recordingId) newDetailed[lessonId].mainAudio = recordingId;
         } else if (part === 'passage') {
           newDetailed[lessonId].passage = Math.max(newDetailed[lessonId].passage || 0, score);
+          if (recordingId) newDetailed[lessonId].passageAudio = recordingId;
         } else if (part === 'example' && partIndex !== undefined) {
           if (!newDetailed[lessonId].examples) newDetailed[lessonId].examples = {};
+          if (!newDetailed[lessonId].examplesAudios) newDetailed[lessonId].examplesAudios = {};
           newDetailed[lessonId].examples[partIndex] = Math.max(newDetailed[lessonId].examples[partIndex] || 0, score);
+          if (recordingId) newDetailed[lessonId].examplesAudios[partIndex] = recordingId;
+        } else if (part === 'full') {
+          newDetailed[lessonId].full = Math.max(newDetailed[lessonId].full || 0, score);
+          if (recordingId) newDetailed[lessonId].fullAudio = recordingId;
         }
 
         const parts = [];
         if (newDetailed[lessonId].main !== undefined) parts.push(newDetailed[lessonId].main);
         if (newDetailed[lessonId].passage !== undefined) parts.push(newDetailed[lessonId].passage);
+        if (newDetailed[lessonId].full !== undefined) parts.push(newDetailed[lessonId].full);
         if (newDetailed[lessonId].examples) {
           Object.values(newDetailed[lessonId].examples).forEach(s => parts.push(s));
         }

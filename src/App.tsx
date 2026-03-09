@@ -319,7 +319,7 @@ export default function App() {
                   <LessonContent
                     lesson={selectedLesson}
                     progress={progress}
-                    onFeedback={(f) => { setAiFeedback(f); completeLesson(selectedLesson.id, f.accuracy); }}
+                    onFeedback={(f) => { setAiFeedback(f); completeLesson(selectedLesson.id, f.accuracy, 'full', undefined, `student-${currentUserId}-${selectedLesson.id}-full`); }}
                     aiFeedback={aiFeedback}
                     completeLesson={completeLesson}
                     role={role}
@@ -483,11 +483,19 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
                 isTeacher={isTeacher}
               />
               {!isTeacher && (
-                <StudentAudioRecorder
-                  expectedText={lesson.content}
-                  recordingId={`student-${currentUserId}-${lesson.id}-main`}
-                  onFeedback={(f) => completeLesson(lesson.id, f.accuracy, 'main')}
-                />
+                <>
+                  <StudentAudioRecorder
+                    expectedText={lesson.content}
+                    recordingId={`student-${currentUserId}-${lesson.id}-main`}
+                    onFeedback={(f) => completeLesson(lesson.id, f.accuracy, 'main', undefined, `student-${currentUserId}-${lesson.id}-main`)}
+                  />
+                  {progress.detailedScores[lesson.id]?.mainAudio && (
+                    <div className="flex flex-col items-center">
+                      <span className="text-[10px] font-bold text-indigo-400 mb-1">Âm thanh đã lưu</span>
+                      <StudentAudioPlayer recordingId={progress.detailedScores[lesson.id].mainAudio!} />
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -506,11 +514,16 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
                     isTeacher={isTeacher}
                   />
                   {!isTeacher && (
-                    <StudentAudioRecorder
-                      expectedText={ex}
-                      recordingId={`student-${currentUserId}-${lesson.id}-ex-${i}`}
-                      onFeedback={(f) => completeLesson(lesson.id, f.accuracy, 'example', i)}
-                    />
+                    <>
+                      <StudentAudioRecorder
+                        expectedText={ex}
+                        recordingId={`student-${currentUserId}-${lesson.id}-ex-${i}`}
+                        onFeedback={(f) => completeLesson(lesson.id, f.accuracy, 'example', i, `student-${currentUserId}-${lesson.id}-ex-${i}`)}
+                      />
+                      {progress.detailedScores[lesson.id]?.examplesAudios?.[i] && (
+                        <StudentAudioPlayer recordingId={progress.detailedScores[lesson.id].examplesAudios[i]} />
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -529,11 +542,16 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
                   isTeacher={isTeacher}
                 />
                 {!isTeacher && (
-                  <StudentAudioRecorder
-                    expectedText={lesson.passage}
-                    recordingId={`student-${currentUserId}-${lesson.id}-passage`}
-                    onFeedback={(f) => completeLesson(lesson.id, f.accuracy, 'passage')}
-                  />
+                  <>
+                    <StudentAudioRecorder
+                      expectedText={lesson.passage}
+                      recordingId={`student-${currentUserId}-${lesson.id}-passage`}
+                      onFeedback={(f) => completeLesson(lesson.id, f.accuracy, 'passage', undefined, `student-${currentUserId}-${lesson.id}-passage`)}
+                    />
+                    {progress.detailedScores[lesson.id]?.passageAudio && (
+                      <StudentAudioPlayer recordingId={progress.detailedScores[lesson.id].passageAudio!} />
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -611,9 +629,15 @@ function LessonContent({ lesson, progress, onFeedback, aiFeedback, completeLesso
           expectedText={
             Array.isArray(lesson.passage) ? lesson.passage.join(' ') : (lesson.passage || lesson.content)
           }
-          onFeedback={onFeedback}
+          onFeedback={(f) => onFeedback({ ...f, recordingId: `student-${currentUserId}-${lesson.id}-full` })}
           recordingId={`student-${currentUserId}-${lesson.id}-full`}
         />
+        {progress.detailedScores[lesson.id]?.fullAudio && (
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-xs font-bold text-orange-600">Nghe lại bài đọc toàn bài:</span>
+            <StudentAudioPlayer recordingId={progress.detailedScores[lesson.id].fullAudio!} />
+          </div>
+        )}
         {aiFeedback && <FeedbackBox feedback={aiFeedback} />}
       </div>
 
@@ -1315,7 +1339,7 @@ function TeacherDashboard({ progress, users, addUser, addBulkUsers, classes, onA
                         {scores.main !== undefined ? (
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-bold text-emerald-600">{scores.main}%</span>
-                            <StudentAudioPlayer recordingId={`student-${selectedStudent.id}-${lessonId}-main`} />
+                            {scores.mainAudio && <StudentAudioPlayer recordingId={scores.mainAudio} />}
                           </div>
                         ) : <span className="text-slate-300">-</span>}
                       </td>
@@ -1325,7 +1349,7 @@ function TeacherDashboard({ progress, users, addUser, addBulkUsers, classes, onA
                             {Object.entries(scores.examples).map(([idx, score]: [any, any]) => (
                               <div key={idx} className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-100">
                                 <span className="text-[10px] font-bold text-blue-600">{score}%</span>
-                                <StudentAudioPlayer recordingId={`student-${selectedStudent.id}-${lessonId}-ex-${idx}`} />
+                                {scores.examplesAudios?.[idx] && <StudentAudioPlayer recordingId={scores.examplesAudios[idx]} />}
                               </div>
                             ))}
                           </div>
@@ -1335,7 +1359,7 @@ function TeacherDashboard({ progress, users, addUser, addBulkUsers, classes, onA
                         {scores.passage !== undefined ? (
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-bold text-purple-600">{scores.passage}%</span>
-                            <StudentAudioPlayer recordingId={`student-${selectedStudent.id}-${lessonId}-passage`} />
+                            {scores.passageAudio && <StudentAudioPlayer recordingId={scores.passageAudio} />}
                           </div>
                         ) : <span className="text-slate-300">-</span>}
                       </td>
@@ -1728,7 +1752,7 @@ function ParentDashboard({ users, classes, lessons, currentUserId }: { users: Us
                       {scores.main !== undefined ? (
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-emerald-600">{scores.main}%</span>
-                          <StudentAudioPlayer recordingId={`student-${selectedStudentId}-${id}-main`} />
+                          {scores.mainAudio && <StudentAudioPlayer recordingId={scores.mainAudio} />}
                         </div>
                       ) : <span className="text-slate-300">-</span>}
                     </td>
@@ -1736,7 +1760,7 @@ function ParentDashboard({ users, classes, lessons, currentUserId }: { users: Us
                       {scores.passage !== undefined ? (
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-purple-600">{scores.passage}%</span>
-                          <StudentAudioPlayer recordingId={`student-${selectedStudentId}-${id}-passage`} />
+                          {scores.passageAudio && <StudentAudioPlayer recordingId={scores.passageAudio} />}
                         </div>
                       ) : <span className="text-slate-300">-</span>}
                     </td>
