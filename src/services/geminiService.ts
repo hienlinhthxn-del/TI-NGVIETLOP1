@@ -38,7 +38,7 @@ export const analyzeReading = async (audioBase64: string, expectedText: string, 
           parts: [
             {
               inlineData: {
-                mimeType: mimeType,
+                mimeType: mimeType.split(';')[0], // Loại bỏ ;codecs=... để Gemini không bị lỗi định dạng
                 data: audioBase64,
               },
             },
@@ -62,7 +62,8 @@ export const analyzeReading = async (audioBase64: string, expectedText: string, 
       }
     });
 
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+    let text = response.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(text);
   } catch (error) {
     console.error("Error analyzing reading:", error);
