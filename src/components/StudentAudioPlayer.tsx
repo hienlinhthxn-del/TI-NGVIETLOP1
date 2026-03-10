@@ -49,16 +49,20 @@ export function StudentAudioPlayer({ recordingId }: StudentAudioPlayerProps) {
     audio.onplay = () => setIsLoading(false);
     audio.onended = () => setIsLoading(false);
 
+    let isRetrying = false;
+
     audio.onerror = (e) => {
-      console.error(`Error loading audio from ${audioSrc}:`, e);
-      // Nếu IDB hỏng hoặc URL lỗi, thử fallback thẳng về API lần cuối
-      if (audioSrc.startsWith('blob:')) {
-        const fallbackAudio = new Audio(`/api/audio/${recordingId}`);
-        fallbackAudio.play().catch(() => { });
-      } else {
-        const errorMsg = audio.error ? ` (Mã lỗi: ${audio.error.code})` : "";
-        alert(`Không thể tải bài đọc${errorMsg}. Có thể do máy chủ chưa lưu kịp hoặc đang mất sóng mạng.`);
+      console.error(`Error loading audio from ${audio.src}:`, e);
+      // Nếu IDB bị hỏng hoặc định dạng Blob trên iOS không mượt, fallback bằng API trên CHÍNH biến audio đã mở khoá
+      if (audio.src.startsWith('blob:') && !isRetrying) {
+        isRetrying = true;
+        audio.src = `/api/audio/${recordingId}`;
+        audio.play().catch(() => { setIsLoading(false); });
+        return;
       }
+
+      const errorMsg = audio.error ? ` (Mã lỗi: ${audio.error.code})` : "";
+      alert(`Không thể tải bài đọc${errorMsg}. Có thể do máy chủ chưa lưu kịp hoặc đang mất sóng mạng.`);
       setIsLoading(false);
     };
 

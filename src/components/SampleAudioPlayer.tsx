@@ -102,6 +102,18 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
   const handlePlay = () => {
     setIsLoading(true);
 
+    // [BƯỚC QUAN TRỌNG CHO IOS]: Unlock audio synchronously trong lúc user click
+    // Mở khoá Audio Context:
+    const unlockAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+    unlockAudio.play().then(() => unlockAudio.pause()).catch(() => { });
+
+    // Mở khoá Speech Synthesis (nếu fallback):
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance('');
+      utterance.volume = 0;
+      window.speechSynthesis.speak(utterance);
+    }
+
     // 1. Ưu tiên giọng giáo viên nếu có
     if (customAudioUrl) {
       const audio = new Audio(customAudioUrl);
