@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, Loader2, Mic, Square, Trash2, Upload } from 'lucide-react';
 import { saveCustomAudio, getCustomAudio, deleteCustomAudio } from '../services/customAudioService';
 import { generateSpeech } from '../services/ttsService';
+import { uploadAudioToCloud } from '../services/cloudAudioService';
 
 interface SampleAudioPlayerProps {
   text: string | string[];
@@ -20,12 +21,20 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    let isMounted = true;
     if (recordingId) {
-      checkCustomAudio();
+      checkCustomAudio(isMounted);
     }
+
+    return () => {
+      isMounted = false;
+      if (customAudioUrl && customAudioUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(customAudioUrl);
+      }
+    };
   }, [recordingId]);
 
-  // Tải danh sách giọng đọc của trình duyệt khi component được mount
+  // Tải danh sách giọng đọc của trình duyệt
   useEffect(() => {
     const loadVoices = () => window.speechSynthesis.getVoices();
     loadVoices();
@@ -39,20 +48,36 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
     };
   }, []);
 
-  const checkCustomAudio = async () => {
+  const checkCustomAudio = async (isMounted: boolean = true) => {
     if (!recordingId) return;
     try {
-      const audio = await getCustomAudio(recordingId);
-      if (audio) {
-        if (customAudioUrl) URL.revokeObjectURL(customAudioUrl);
-        setCustomAudioUrl(URL.createObjectURL(audio));
+      // 1. Ưu tiên lấy từ IndexedDB (local)
+      const localAudio = await getCustomAudio(recordingId);
+      if (localAudio && isMounted) {
+        if (customAudioUrl && customAudioUrl.startsWith('blob:')) URL.revokeObjectURL(customAudioUrl);
+        const newUrl = URL.createObjectURL(localAudio);
+        setCustomAudioUrl(newUrl);
+        setHasCustomAudio(true);
+        return;
+      }
+
+      // 2. Nếu không có ở local, thử tải từ cloud
+      const cloudUrl = `/api/audio/${recordingId}`;
+      const response = await fetch(cloudUrl);
+
+      if (response.ok && isMounted) {
+        const cloudBlob = await response.blob();
+        const newUrl = URL.createObjectURL(cloudBlob);
+        setCustomAudioUrl(newUrl);
         setHasCustomAudio(true);
       } else {
+        if (!isMounted) return;
         setHasCustomAudio(false);
         setCustomAudioUrl(null);
       }
     } catch (e) {
-      console.error("Check custom audio error:", e);
+      if (!isMounted) return;
+      console.warn("Could not find custom audio locally or on cloud for " + recordingId);
     }
   };
 
@@ -151,8 +176,17 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         if (recordingId) {
+          // Lưu local để phát ngay, và tải lên cloud cho thiết bị khác
           await saveCustomAudio(recordingId, audioBlob);
-          setHasCustomAudio(true);
+          await checkCustomAudio(); // Cập nhật lại state từ local blob
+
+          const extension = audioBlob.type.includes('mp4') ? 'mp4' : 'webm';
+          uploadAudioToCloud(recordingId, audioBlob, extension)
+            .then(() => console.log(`[Teacher Audio] Uploaded ${recordingId}`))
+            .catch(err => {
+              console.error(`[Teacher Audio] Upload failed for ${recordingId}`, err);
+              alert("Lỗi tải lên giọng đọc của giáo viên. Học sinh ở máy khác có thể không nghe được.");
+            });
         }
         stream.getTracks().forEach(track => track.stop());
       };
@@ -173,16 +207,29 @@ export function SampleAudioPlayer({ text, label = "Nghe mẫu", recordingId, isT
 
   const handleDelete = async () => {
     if (recordingId && window.confirm("Xóa giọng đọc mẫu của giáo viên?")) {
+      // Xóa ở local
       await deleteCustomAudio(recordingId);
       setHasCustomAudio(false);
+      setCustomAudioUrl(null);
+      // TODO: Gửi yêu cầu lên server để xóa file trên cloud
+      // Ví dụ: await fetch(`/api/audio/${recordingId}`, { method: 'DELETE' });
     }
   };
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && recordingId) {
+      // Lưu local và tải lên cloud
       await saveCustomAudio(recordingId, file);
-      setHasCustomAudio(true);
+      await checkCustomAudio(); // Cập nhật state
+
+      const extension = file.name.split('.').pop() || 'mp3';
+      uploadAudioToCloud(recordingId, file, extension)
+        .then(() => console.log(`[Teacher Audio] Uploaded ${recordingId} from file.`))
+        .catch(err => {
+          console.error(`[Teacher Audio] Upload failed for ${recordingId}`, err);
+          alert("Lỗi tải lên giọng đọc của giáo viên. Học sinh ở máy khác có thể không nghe được.");
+        });
     }
   };
 
