@@ -70,6 +70,23 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
     setIsAnalyzing(true);
     setFeedback(null);
 
+    // helper that persists the recording regardless of analysis outcome
+    const persist = () => {
+      if (!recordingId) return;
+      const extension = audioBlob.type.includes('mp4') ? 'mp4' :
+        audioBlob.type.includes('ogg') ? 'ogg' :
+        audioBlob.type.includes('mpeg') ? 'mp3' : 'webm';
+
+      console.log(`[Upload] Starting (background): ${recordingId}.${extension}`);
+      saveStudentAudio(recordingId, audioBlob).catch(e => console.error("Local save error:", e));
+      uploadAudioToCloud(recordingId, audioBlob, extension)
+        .then(() => console.log(`[Upload] Successfully saved: ${recordingId}`))
+        .catch(err => {
+          console.error("[Upload] Failed to save audio:", err);
+          alert("Bạn đang dùng ở chế độ ngoại tuyến (Offline) hoặc máy chủ đang bận. Điểm số của con đã được lưu lại, nhưng file ghi âm có thể không được tải lên máy chủ của cô giáo.");
+        });
+    };
+
     try {
       const reader = new FileReader();
       reader.readAsDataURL(audioBlob);
@@ -78,46 +95,30 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
         const textToAnalyze = Array.isArray(expectedText) ? expectedText.join(' ') : expectedText;
 
         // 1. Phân tích AI - Quan trọng nhất nên chạy trước
+        let result;
         try {
-          const result = await analyzeReading(base64data, textToAnalyze, audioBlob.type);
-          setFeedback(result);
-
-          // Gọi onFeedback ngay sau khi có điểm để lưu vào localStorage/DB
-          if (onFeedback) {
-            onFeedback(result, audioBlob);
-          }
-          setIsAnalyzing(false);
-
-          // 2. Chấm điểm xong mới tải lên Cloud ở background (không chặn kết quả)
-          if (recordingId) {
-            const extension = audioBlob.type.includes('mp4') ? 'mp4' :
-              audioBlob.type.includes('ogg') ? 'ogg' :
-                audioBlob.type.includes('mpeg') ? 'mp3' : 'webm';
-
-            console.log(`[Upload] Starting: ${recordingId}.${extension}`);
-
-            // Lưu file vào IndexedDB làm dự phòng
-            saveStudentAudio(recordingId, audioBlob).catch(e => console.error("Local save error:", e));
-
-            // Chạy upload nhưng bắt lỗi riêng để không báo lỗi 'chấm điểm'
-            uploadAudioToCloud(recordingId, audioBlob, extension)
-              .then(() => {
-                console.log(`[Upload] Successfully saved: ${recordingId}`);
-              })
-              .catch(err => {
-                console.error("[Upload] Failed to save audio:", err);
-                // Cải thiện thông báo lỗi cho phụ huynh/học sinh biết
-                alert("Bạn đang dùng ở chế độ ngoại tuyến (Offline) hoặc máy chủ đang bận. Điểm số của con đã được lưu lại, nhưng file ghi âm có thể không được tải lên máy chủ của cô giáo.");
-              });
-          }
+          result = await analyzeReading(base64data, textToAnalyze, audioBlob.type);
         } catch (err: any) {
-          console.error("Analysis or process failed:", err);
-          setFeedback({ accuracy: 0, feedback: "Cô chưa nghe rõ, con bấm nút ghi âm và đọc lại cho cô nghe nhé!" });
-          setIsAnalyzing(false);
+          console.error("Analysis failed:", err);
+          result = { accuracy: 0, feedback: "Cô chưa nghe rõ, con bấm nút ghi âm và đọc lại cho cô nghe nhé!" };
         }
+
+        setFeedback(result);
+
+        // dù thế nào cũng thông báo cho cha mẹ/ứng dụng
+        if (onFeedback) {
+          onFeedback(result, audioBlob);
+        }
+
+        persist();
+        setIsAnalyzing(false);
       };
     } catch (error) {
       console.error("Handle analyze error:", error);
+      const fallback = { accuracy: 0, feedback: "Lỗi khi xử lý âm thanh." };
+      setFeedback(fallback);
+      if (onFeedback) onFeedback(fallback, audioBlob);
+      persist();
       setIsAnalyzing(false);
     }
   };
