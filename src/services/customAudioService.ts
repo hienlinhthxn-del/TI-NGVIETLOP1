@@ -50,10 +50,16 @@ export async function deleteCustomAudio(id: string) {
 }
 
 export async function saveStudentAudio(id: string, audioBlob: Blob) {
-  const db = await getDB();
-  const arrayBuffer = await audioBlob.arrayBuffer();
-  // Lưu dưới dạng object chứa buffer và type để reconstruct lại chính xác
-  await db.put(STUDENT_STORE, { buffer: arrayBuffer, type: audioBlob.type }, id);
+  try {
+    const db = await getDB();
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    // Lưu dưới dạng object chứa buffer và type để reconstruct lại chính xác
+    await db.put(STUDENT_STORE, { buffer: arrayBuffer, type: audioBlob.type }, id);
+    return true;
+  } catch (e) {
+    console.error("saveStudentAudio failed:", e);
+    return false;
+  }
 }
 
 export async function getStudentAudio(id: string): Promise<Blob | null> {

@@ -71,26 +71,36 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
     setFeedback(null);
 
     // helper that persists the recording regardless of analysis outcome
-    const persist = () => {
-      if (!recordingId) return;
+    const persist = async () => {
+      if (!recordingId) {
+        console.warn('[Persist] No recordingId provided, skipping save');
+        return;
+      }
       const extension = audioBlob.type.includes('mp4') ? 'mp4' :
         audioBlob.type.includes('ogg') ? 'ogg' :
         audioBlob.type.includes('mpeg') ? 'mp3' : 'webm';
 
       console.log(`[Upload] Starting (background): ${recordingId}.${extension}`);
-      saveStudentAudio(recordingId, audioBlob).catch(e => console.error("Local save error:", e));
+      try {
+        const ok = await saveStudentAudio(recordingId, audioBlob);
+        if (ok) console.log(`[LocalSave] Successfully saved local audio: ${recordingId}`);
+        else console.warn(`[LocalSave] Failed to save locally: ${recordingId}`);
+      } catch (e) {
+        console.error('[LocalSave] Exception while saving locally:', e);
+      }
+
       uploadAudioToCloud(recordingId, audioBlob, extension)
-        .then(() => console.log(`[Upload] Successfully saved: ${recordingId}`))
+        .then(() => console.log(`[Upload] Successfully uploaded to cloud: ${recordingId}`))
         .catch(err => {
-          console.error("[Upload] Failed to save audio:", err);
-          alert("Bạn đang dùng ở chế độ ngoại tuyến (Offline) hoặc máy chủ đang bận. Điểm số của con đã được lưu lại, nhưng file ghi âm có thể không được tải lên máy chủ của cô giáo.");
+          console.error("[Upload] Failed to upload audio:", err);
+          alert("Có lỗi khi tải âm thanh lên máy chủ. File đã được lưu cục bộ, hãy thử lại khi có mạng.");
         });
     };
 
     try {
       const reader = new FileReader();
       reader.readAsDataURL(audioBlob);
-      reader.onloadend = async () => {
+        reader.onloadend = async () => {
         const base64data = (reader.result as string).split(',')[1];
         const textToAnalyze = Array.isArray(expectedText) ? expectedText.join(' ') : expectedText;
 
@@ -110,7 +120,7 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
           onFeedback(result, audioBlob);
         }
 
-        persist();
+        await persist();
         setIsAnalyzing(false);
       };
     } catch (error) {
@@ -118,7 +128,7 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
       const fallback = { accuracy: 0, feedback: "Lỗi khi xử lý âm thanh." };
       setFeedback(fallback);
       if (onFeedback) onFeedback(fallback, audioBlob);
-      persist();
+      await persist();
       setIsAnalyzing(false);
     }
   };
