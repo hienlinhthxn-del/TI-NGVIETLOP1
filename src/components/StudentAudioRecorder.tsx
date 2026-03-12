@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Mic, Square, Play, RefreshCw, Sparkles, Loader2 } from 'lucide-react';
 import { analyzeReading } from '../services/geminiService';
 import { uploadAudioToCloud } from '../services/cloudAudioService'; // Đảm bảo import đúng
-import { saveStudentAudio } from '../services/customAudioService';
+import { saveStudentAudio, getStudentAudio } from '../services/customAudioService';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface StudentAudioRecorderProps {
@@ -110,6 +110,27 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
         });
     };
 
+        const retryUpload = async () => {
+          if (!recordingId) return;
+          try {
+            setSaveStatus('uploading');
+            const blob = await getStudentAudio(recordingId);
+            if (!blob) {
+              setSaveStatus('upload_failed');
+              alert('Không tìm thấy file cục bộ để tải lại.');
+              return;
+            }
+            const extension = blob.type.includes('mp4') ? 'mp4' : blob.type.includes('ogg') ? 'ogg' : blob.type.includes('mpeg') ? 'mp3' : 'webm';
+            await uploadAudioToCloud(recordingId, blob, extension);
+            setSaveStatus('uploaded');
+            alert('Tải lên thành công.');
+          } catch (e) {
+            console.error('[RetryUpload] Failed:', e);
+            setSaveStatus('upload_failed');
+            alert('Tải lên thất bại, vui lòng thử lại sau.');
+          }
+        };
+
     try {
       const reader = new FileReader();
       reader.readAsDataURL(audioBlob);
@@ -208,7 +229,12 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
               {saveStatus === 'local_failed' && <span className="px-2 py-1 bg-red-50 text-red-700 rounded-full">Lưu cục bộ thất bại</span>}
               {saveStatus === 'uploading' && <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-full">Đang tải lên...</span>}
               {saveStatus === 'uploaded' && <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-full">Đã tải lên</span>}
-              {saveStatus === 'upload_failed' && <span className="px-2 py-1 bg-red-50 text-red-700 rounded-full">Tải lên thất bại</span>}
+              {saveStatus === 'upload_failed' && (
+                <span className="inline-flex items-center gap-2">
+                  <span className="px-2 py-1 bg-red-50 text-red-700 rounded-full">Tải lên thất bại</span>
+                  <button onClick={retryUpload} className="px-2 py-1 bg-red-600 text-white rounded-full text-[12px]">Thử lại</button>
+                </span>
+              )}
             </div>
           </div>
         )}
