@@ -440,7 +440,7 @@ interface LessonContentProps {
   progress: ProgressData;
   onFeedback: (feedback: any) => void;
   aiFeedback: any;
-  completeLesson: (id: string, score?: number, part?: string, index?: number) => void;
+  completeLesson: (id: string, score?: number, part?: string, index?: number, recordingId?: string) => void;
   role: Role;
   assignLesson: (id: string, message?: string, dueDate?: string) => void;
   assignments: Assignment[];

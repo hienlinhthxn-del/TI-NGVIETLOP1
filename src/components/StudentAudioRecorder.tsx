@@ -65,6 +65,27 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
     }
   };
 
+  const retryUpload = async () => {
+    if (!recordingId) return;
+    try {
+      setSaveStatus('uploading');
+      const blob = await getStudentAudio(recordingId);
+      if (!blob) {
+        setSaveStatus('upload_failed');
+        alert('Không tìm thấy file cục bộ để tải lại.');
+        return;
+      }
+      const extension = blob.type.includes('mp4') ? 'mp4' : blob.type.includes('ogg') ? 'ogg' : blob.type.includes('mpeg') ? 'mp3' : 'webm';
+      await uploadAudioToCloud(recordingId, blob, extension);
+      setSaveStatus('uploaded');
+      alert('Tải lên thành công.');
+    } catch (e) {
+      console.error('[RetryUpload] Failed:', e);
+      setSaveStatus('upload_failed');
+      alert('Tải lên thất bại, vui lòng thử lại sau.');
+    }
+  };
+
   const handleAnalyze = async () => {
     if (!audioBlob) return;
 
@@ -110,26 +131,7 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
         });
     };
 
-        const retryUpload = async () => {
-          if (!recordingId) return;
-          try {
-            setSaveStatus('uploading');
-            const blob = await getStudentAudio(recordingId);
-            if (!blob) {
-              setSaveStatus('upload_failed');
-              alert('Không tìm thấy file cục bộ để tải lại.');
-              return;
-            }
-            const extension = blob.type.includes('mp4') ? 'mp4' : blob.type.includes('ogg') ? 'ogg' : blob.type.includes('mpeg') ? 'mp3' : 'webm';
-            await uploadAudioToCloud(recordingId, blob, extension);
-            setSaveStatus('uploaded');
-            alert('Tải lên thành công.');
-          } catch (e) {
-            console.error('[RetryUpload] Failed:', e);
-            setSaveStatus('upload_failed');
-            alert('Tải lên thất bại, vui lòng thử lại sau.');
-          }
-        };
+        
 
     try {
       const reader = new FileReader();

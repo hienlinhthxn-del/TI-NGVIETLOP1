@@ -1,5 +1,7 @@
-const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+// support environments where TypeScript may not know ImportMeta.env
+const env = (import.meta as any)?.env || {};
+const CLOUD_NAME = env.VITE_CLOUDINARY_CLOUD_NAME || env.CLOUDINARY_CLOUD_NAME;
+const UPLOAD_PRESET = env.VITE_CLOUDINARY_UPLOAD_PRESET || env.VITE_CLOUDINARY_PRESET;
 
 export const uploadAudioToCloud = async (recordingId: string, audioBlob: Blob) => {
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
