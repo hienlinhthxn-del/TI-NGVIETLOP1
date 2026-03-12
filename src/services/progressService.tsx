@@ -208,12 +208,21 @@ export const useProgress = () => {
 
       try {
         const { _id, __v, ...cleanProgress } = (dataToSync as any);
-
-        await fetch('/api/progress', {
+        const res = await fetch('/api/progress', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: currentUserId, ...cleanProgress })
         });
+
+        if (!res.ok) {
+          const errBody = await res.text();
+          console.error('Sync to cloud failed:', res.status, errBody);
+        } else {
+          try {
+            const json = await res.json();
+            console.log('[Sync] Progress synced to cloud', json?.data?.userId || currentUserId);
+          } catch (e) { /* ignore parse errors */ }
+        }
       } catch (e) {
         console.error("Lỗi đồng bộ đám mây:", e);
       }

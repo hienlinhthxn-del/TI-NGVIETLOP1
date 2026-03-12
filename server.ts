@@ -137,7 +137,20 @@ async function startServer() {
 
   // API tiến độ học tập (Cloud Sync)
   app.get("/api/progress", async (req, res) => {
-    const { userId } = req.query;
+    const { userId, userIds } = req.query;
+
+    // Bulk fetch by comma-separated userIds (dành cho view giáo viên)
+    if (userIds) {
+      try {
+        const ids = String(userIds).split(',').map(s => s.trim()).filter(Boolean);
+        const progresses = await Progress.find({ userId: { $in: ids } });
+        return res.json(progresses.map(p => p.toObject()));
+      } catch (err: any) {
+        console.error('Progress bulk fetch error:', err.message);
+        return res.status(500).json({ error: 'Lỗi lấy dữ liệu tiến độ (bulk)' });
+      }
+    }
+
     if (!userId) return res.status(400).json({ error: "userId required" });
 
     try {
@@ -159,21 +172,27 @@ async function startServer() {
     if (!userId) return res.status(400).json({ error: "userId required" });
 
     // Cập nhật hoặc tạo mới progress
-    await Progress.findOneAndUpdate(
-      { userId },
-      {
-        userId,
-        username: progressData.username,
-        role: 'student', // Mặc định là student
-        data: progressData,
-        points: progressData.points || 0,
-        completedLessons: progressData.completedLessons || [],
-        lastUpdated: new Date()
-      },
-      { upsert: true, new: true }
-    );
+    try {
+      const updated = await Progress.findOneAndUpdate(
+        { userId },
+        {
+          userId,
+          username: progressData.username,
+          role: 'student', // Mặc định là student
+          data: progressData,
+          points: progressData.points || 0,
+          completedLessons: progressData.completedLessons || [],
+          lastUpdated: new Date()
+        },
+        { upsert: true, new: true }
+      );
 
-    res.json({ success: true });
+      console.log(`[Progress] Saved for userId=${userId} points=${progressData.points || 0} lessons=${(progressData.completedLessons || []).length}`);
+      return res.json({ success: true, data: updated });
+    } catch (err: any) {
+      console.error('Progress save error:', err.message);
+      return res.status(500).json({ error: 'Lỗi lưu tiến độ' });
+    }
   });
 
   // API Authentication
@@ -242,21 +261,38 @@ async function startServer() {
     }
   });
 
-  // API nghe lại bài đọc học sinh
-  app.get("/api/audio/:recordingId", (req, res) => {
+  // API nghe lại bài đọc học sinh (proxy audio từ Cloudinary để tránh vấn đề CORS trên webview/mobile)
+  app.get("/api/audio/:recordingId", async (req, res) => {
     const { recordingId } = req.params;
-    // Lấy Cloud Name từ .env hoặc dùng mặc định đã cấu hình trong dự án
     const cloudName = process.env.VITE_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME || "dx8v9vuxo";
 
     if (!cloudName) {
       return res.status(500).json({ error: "Cloudinary Cloud Name chưa được cấu hình trên server." });
     }
 
-    // Chuyển hướng tới URL audio trên Cloudinary với tối ưu hóa
-    // f_auto giúp tự động chuyển đổi định dạng âm thanh tốt nhất
     const audioUrl = `https://res.cloudinary.com/${cloudName}/video/upload/f_auto/${recordingId}.mp3`;
-    console.log(`[Audio Request] Redirecting ${recordingId} to: ${audioUrl}`);
-    res.redirect(audioUrl);
+    console.log(`[Audio Request] Proxying ${recordingId} from ${audioUrl}`);
+
+    try {
+      const fetchRes = await fetch(audioUrl);
+      if (!fetchRes.ok) {
+        return res.status(502).json({ error: 'Failed to fetch from cloud provider' });
+      }
+
+      const contentType = fetchRes.headers.get('content-type') || 'audio/mpeg';
+      const arrayBuffer = await fetchRes.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Allow cross-origin playback from mobile/webview
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Length', String(buffer.length));
+
+      res.status(200).send(buffer);
+    } catch (err) {
+      console.error('[Audio] Proxy error:', err);
+      res.status(500).json({ error: 'Internal server error while proxying audio' });
+    }
   });
 
   // Vite middleware for development

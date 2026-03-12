@@ -170,7 +170,7 @@ export default function App() {
           </div>
         </div>
         {(role === 'student' || (role === 'teacher' && teacherView === 'lessons')) && (
-          <nav className="hidden md:flex items-center gap-1 bg-orange-50 p-1 rounded-2xl">
+          <nav className="flex items-center gap-1 bg-orange-50 p-1 rounded-2xl">
             <TabBtn active={activeTab === 'tap1'} onClick={() => { setActiveTab('tap1'); setSelectedLesson(null); }}>Tập 1</TabBtn>
             <TabBtn active={activeTab === 'tap2'} onClick={() => { setActiveTab('tap2'); setSelectedLesson(null); }}>Tập 2</TabBtn>
           </nav>

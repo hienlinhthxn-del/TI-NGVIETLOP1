@@ -43,7 +43,10 @@ export function StudentAudioPlayer({ recordingId }: StudentAudioPlayerProps) {
     setIsLoading(true);
 
     // Tạo Audio và gọi play() ngay lập tức ĐỒNG BỘ trong click handler (quan trọng cho Mobile)
-    const audio = new Audio(audioSrc);
+    const audio = new Audio();
+    // Đặt crossOrigin để cho phép phát từ proxy server/CORS (hữu ích cho webview/mobile)
+    try { audio.crossOrigin = 'anonymous'; } catch (e) { /* ignore */ }
+    audio.src = audioSrc;
     audio.preload = "auto";
 
     audio.onplay = () => setIsLoading(false);
