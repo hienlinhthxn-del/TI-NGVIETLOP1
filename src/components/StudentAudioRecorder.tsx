@@ -17,6 +17,7 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [feedback, setFeedback] = useState<any>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle'|'local_saved'|'local_failed'|'uploading'|'uploaded'|'upload_failed'>('idle');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
@@ -82,17 +83,29 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
 
       console.log(`[Upload] Starting (background): ${recordingId}.${extension}`);
       try {
+        setSaveStatus('idle');
         const ok = await saveStudentAudio(recordingId, audioBlob);
-        if (ok) console.log(`[LocalSave] Successfully saved local audio: ${recordingId}`);
-        else console.warn(`[LocalSave] Failed to save locally: ${recordingId}`);
+        if (ok) {
+          console.log(`[LocalSave] Successfully saved local audio: ${recordingId}`);
+          setSaveStatus('local_saved');
+        } else {
+          console.warn(`[LocalSave] Failed to save locally: ${recordingId}`);
+          setSaveStatus('local_failed');
+        }
       } catch (e) {
         console.error('[LocalSave] Exception while saving locally:', e);
+        setSaveStatus('local_failed');
       }
 
+      setSaveStatus('uploading');
       uploadAudioToCloud(recordingId, audioBlob, extension)
-        .then(() => console.log(`[Upload] Successfully uploaded to cloud: ${recordingId}`))
+        .then(() => {
+          console.log(`[Upload] Successfully uploaded to cloud: ${recordingId}`);
+          setSaveStatus('uploaded');
+        })
         .catch(err => {
           console.error("[Upload] Failed to upload audio:", err);
+          setSaveStatus('upload_failed');
           alert("Có lỗi khi tải âm thanh lên máy chủ. File đã được lưu cục bộ, hãy thử lại khi có mạng.");
         });
     };
@@ -157,7 +170,8 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
         )}
 
         {audioUrl && !isRecording && (
-          <div className="flex gap-1">
+          <div className="flex flex-col gap-1">
+            <div className="flex gap-1">
             <button
               onClick={() => {
                 const audio = new Audio(audioUrl);
@@ -187,6 +201,15 @@ export function StudentAudioRecorder({ expectedText, onFeedback, recordingId }: 
             >
               <RefreshCw size={18} />
             </button>
+            </div>
+
+            <div className="text-xs mt-1">
+              {saveStatus === 'local_saved' && <span className="px-2 py-1 bg-green-50 text-green-700 rounded-full">Đã lưu cục bộ</span>}
+              {saveStatus === 'local_failed' && <span className="px-2 py-1 bg-red-50 text-red-700 rounded-full">Lưu cục bộ thất bại</span>}
+              {saveStatus === 'uploading' && <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-full">Đang tải lên...</span>}
+              {saveStatus === 'uploaded' && <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-full">Đã tải lên</span>}
+              {saveStatus === 'upload_failed' && <span className="px-2 py-1 bg-red-50 text-red-700 rounded-full">Tải lên thất bại</span>}
+            </div>
           </div>
         )}
       </div>
