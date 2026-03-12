@@ -271,24 +271,37 @@ async function startServer() {
     }
 
     const audioUrl = `https://res.cloudinary.com/${cloudName}/video/upload/f_auto/${recordingId}.mp3`;
-    console.log(`[Audio Request] Proxying ${recordingId} from ${audioUrl}`);
+    console.log(`[Audio Request] Proxying ${recordingId} from ${audioUrl} (range: ${req.headers.range || 'none'})`);
 
     try {
-      const fetchRes = await fetch(audioUrl);
+      // Forward Range header if present so cloud provider can respond with partial content
+      const headers: Record<string, string> = {};
+      if (req.headers.range) headers['Range'] = String(req.headers.range);
+
+      const fetchRes = await fetch(audioUrl, { headers });
       if (!fetchRes.ok) {
         return res.status(502).json({ error: 'Failed to fetch from cloud provider' });
       }
 
       const contentType = fetchRes.headers.get('content-type') || 'audio/mpeg';
+      const contentLength = fetchRes.headers.get('content-length');
+      const acceptRanges = fetchRes.headers.get('accept-ranges') || 'bytes';
+      const contentRange = fetchRes.headers.get('content-range');
+
+      // Allow cross-origin playback and expose range headers
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept');
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Accept-Ranges, Content-Range');
+      res.setHeader('Content-Type', contentType);
+      if (contentLength) res.setHeader('Content-Length', contentLength);
+      res.setHeader('Accept-Ranges', acceptRanges);
+      if (contentRange) res.setHeader('Content-Range', contentRange);
+
       const arrayBuffer = await fetchRes.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
-      // Allow cross-origin playback from mobile/webview
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Length', String(buffer.length));
-
-      res.status(200).send(buffer);
+      // Use the same status code returned by the cloud (206 for partial content)
+      res.status(fetchRes.status).send(buffer);
     } catch (err) {
       console.error('[Audio] Proxy error:', err);
       res.status(500).json({ error: 'Internal server error while proxying audio' });
